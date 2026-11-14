@@ -37,6 +37,7 @@ export function assistantErrorText(message: string): string {
     case "AI_PROVIDER_TIMEOUT": return "The AI service timed out. Please try again."
     case "AI_PROVIDER_NETWORK": return "The app couldn't connect to the AI service. Please try again."
     case "AI_PROVIDER_UNKNOWN": return "The AI service couldn't complete the request. Contact omg.dev support if this continues."
+    case "AI_PROVIDER_HTTP_404": return "The AI service could not find the requested model or route. If this continues after republishing, contact omg.dev support."
     default: return "The assistant couldn't reply. Check your connection and try again. If it only happens in the published app, contact omg.dev support."
   }
 }
