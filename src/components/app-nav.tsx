@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Brand } from "@/components/brand"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { LanguageMenu } from "@/components/language-menu"
+import { useT } from "@/lib/i18n"
 
 const links = [
   { to: "/", label: "Home", icon: Home },
@@ -20,6 +22,7 @@ const linkBase =
 const linkActive = { className: "bg-accent text-foreground font-medium" }
 
 export function AppNav() {
+  const t = useT()
   const user = useUser()
   const { signOut } = useAuth()
   const [open, setOpen] = useState(false)
@@ -31,8 +34,9 @@ export function AppNav() {
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-3 px-4 sm:px-6">
         <Brand />
 
+        <div className="flex items-center gap-1">
         {/* Desktop: links inline */}
-        <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
+        <nav aria-label={t("Main")} className="hidden items-center gap-1 md:flex">
           {desktopLinks.map((l) => (
             <Link
               key={l.to}
@@ -41,37 +45,39 @@ export function AppNav() {
               className={`${linkBase} min-h-10 gap-2 text-sm`}
               activeProps={linkActive}
             >
-              {l.label}
+              {t(l.label)}
             </Link>
           ))}
           <ThemeToggle compact className="ml-2" />
           {user ? (
             <Button variant="ghost" className="ml-2 min-h-10" onClick={() => void signOut()}>
-              <LogOut className="size-4" aria-hidden="true" /> Sign out
+              <LogOut className="size-4" aria-hidden="true" /> {t("Sign out")}
             </Button>
           ) : (
             <Link to="/signin" className="ml-2">
               <Button className="min-h-10">
-                <LogIn className="size-4" aria-hidden="true" /> Sign in
+                <LogIn className="size-4" aria-hidden="true" /> {t("Sign in")}
               </Button>
             </Link>
           )}
         </nav>
 
+        <LanguageMenu />
+
         {/* Mobile: hamburger menu */}
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger
             render={
-              <Button variant="ghost" size="icon" className="size-11 md:hidden" aria-label="Open menu">
+              <Button variant="ghost" size="icon" className="size-11 md:hidden" aria-label={t("Open menu")}>
                 <Menu className="size-6" aria-hidden="true" />
               </Button>
             }
           />
           <SheetContent side="right" className="w-72 p-4">
             <SheetHeader className="p-0 pb-2">
-              <SheetTitle>Menu</SheetTitle>
+              <SheetTitle>{t("Menu")}</SheetTitle>
             </SheetHeader>
-            <nav aria-label="Main" className="flex flex-col gap-1">
+            <nav aria-label={t("Main")} className="flex flex-col gap-1">
               {links.map((l) => (
                 <Link
                   key={l.to}
@@ -82,13 +88,13 @@ export function AppNav() {
                   onClick={() => setOpen(false)}
                 >
                   <l.icon className="size-5" aria-hidden="true" />
-                  {l.label}
+                  {t(l.label)}
                 </Link>
               ))}
             </nav>
             <div className="mt-auto space-y-4 border-t border-border pt-4">
               <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Appearance</p>
+                <p className="text-sm font-medium text-muted-foreground">{t("Appearance")}</p>
                 <ThemeToggle />
               </div>
               {user ? (
@@ -100,18 +106,19 @@ export function AppNav() {
                     void signOut()
                   }}
                 >
-                  <LogOut className="size-4" aria-hidden="true" /> Sign out
+                  <LogOut className="size-4" aria-hidden="true" /> {t("Sign out")}
                 </Button>
               ) : (
                 <Link to="/signin" onClick={() => setOpen(false)}>
                   <Button className="h-11 w-full">
-                    <LogIn className="size-4" aria-hidden="true" /> Sign in
+                    <LogIn className="size-4" aria-hidden="true" /> {t("Sign in")}
                   </Button>
                 </Link>
               )}
             </div>
           </SheetContent>
         </Sheet>
+        </div>
       </div>
     </header>
   )

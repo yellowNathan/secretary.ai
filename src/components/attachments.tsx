@@ -4,9 +4,11 @@ import { Paperclip, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { fileUrl, formatBytes } from "@/lib/files"
 import type { Attachment } from "@/lib/tasks"
+import { useT } from "@/lib/i18n"
 
 // Files attached to one task. Upload stores the file and a row that points to it.
 export function Attachments({ taskId }: { taskId: string }) {
+  const t = useT()
   const { data, create } = useCollection<Attachment>({ collection: "attachments", api: "/api/attachments" })
   const { upload, uploading, progress } = useUpload()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -23,7 +25,7 @@ export function Attachments({ taskId }: { taskId: string }) {
       await upload(file, { key })
       await create({ task: taskId, name: file.name, key, size: file.size })
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed")
+      setError(err instanceof Error ? err.message : t("Upload failed"))
     }
   }
 
@@ -31,7 +33,7 @@ export function Attachments({ taskId }: { taskId: string }) {
     try {
       window.open(await fileUrl(a.key), "_blank", "noopener")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not open file")
+      setError(err instanceof Error ? err.message : t("Could not open file"))
     }
   }
 
@@ -48,7 +50,7 @@ export function Attachments({ taskId }: { taskId: string }) {
           <span className="shrink-0 text-muted-foreground">{formatBytes(a.size)}</span>
         </button>
       ))}
-      <input ref={inputRef} type="file" className="hidden" onChange={onPick} aria-label="Choose file" />
+      <input ref={inputRef} type="file" className="hidden" onChange={onPick} aria-label={t("Choose file")} />
       <Button
         variant="outline"
         size="sm"
@@ -56,7 +58,7 @@ export function Attachments({ taskId }: { taskId: string }) {
         onClick={() => inputRef.current?.click()}
       >
         <Upload className="size-3.5" />
-        {uploading ? `Uploading ${Math.round(progress * 100)}%` : "Attach file"}
+        {uploading ? t("Uploading {n}%", { n: Math.round(progress * 100) }) : t("Attach file")}
       </Button>
       {error && (
         <p role="alert" className="text-xs text-destructive">

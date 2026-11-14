@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { CalendarDays, Columns3, MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { useT } from "@/lib/i18n"
 
 // "/" — the landing page for visitors.
 export const Route = createFileRoute("/")({
@@ -27,23 +28,23 @@ const features = [
 ]
 
 function Landing() {
+  const t = useT()
   const navigate = useNavigate()
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-12 px-4 py-12 sm:px-6 sm:py-20">
       <section className="flex flex-col items-center gap-6 text-center">
         <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-          Organise your work, neatly.
+          {t("Organise your work, neatly.")}
         </h1>
         <p className="max-w-xl text-base text-muted-foreground">
-          A simple board for your tasks. Make the columns you need, add tasks with due dates,
-          and keep everything in order.
+          {t("A simple board for your tasks. Make the columns you need, add tasks with due dates, and keep everything in order.")}
         </p>
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
           <Button size="lg" onClick={() => navigate({ to: "/signin" })}>
-            Sign up or sign in
+            {t("Sign up or sign in")}
           </Button>
           <Button size="lg" variant="outline" onClick={() => navigate({ to: "/demo" })}>
-            Try the demo
+            {t("Try the demo")}
           </Button>
         </div>
       </section>
@@ -52,14 +53,14 @@ function Landing() {
         {features.map(({ icon: Icon, title, text }) => (
           <Card key={title} className="gap-2 p-5">
             <Icon className="size-5 text-muted-foreground" aria-hidden="true" />
-            <h2 className="text-sm font-medium">{title}</h2>
-            <p className="text-sm text-muted-foreground leading-relaxed">{text}</p>
+            <h2 className="text-sm font-medium">{t(title)}</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">{t(text)}</p>
           </Card>
         ))}
       </section>
 
       <p className="text-center text-sm text-muted-foreground">
-        Already have an account? <Link to="/signin" className="underline underline-offset-4">Sign in</Link>
+        {t("Already have an account?")} <Link to="/signin" className="underline underline-offset-4">{t("Sign in")}</Link>
       </p>
     </main>
   )

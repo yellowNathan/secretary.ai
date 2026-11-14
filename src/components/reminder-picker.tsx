@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { formatOffset, units } from "@/lib/reminders"
 import { cn } from "@/lib/utils"
+import { useT } from "@/lib/i18n"
 
 // Value is seconds before the due moment; -1 = no reminder, 0 = at the due time.
 const presets = [-1, 0, 10, 60, 5 * 60, 15 * 60, 3600, 86_400, 3 * 86_400, 604_800]
@@ -24,6 +25,7 @@ export function ReminderPicker({
   onChange: (seconds: number) => void
   className?: string
 }) {
+  const t = useT()
   const [custom, setCustom] = useState(!presets.includes(value))
   const { amount, unit } = split(value)
 
@@ -54,12 +56,12 @@ export function ReminderPicker({
             {formatOffset(p)}
           </option>
         ))}
-        <option value="custom">Custom…</option>
+        <option value="custom">{t("Custom…")}</option>
       </select>
       {custom && (
         <div className="flex items-center gap-2">
           <label htmlFor={`${id}-amount`} className="sr-only">
-            Remind how many
+            {t("Remind how many")}
           </label>
           <input
             id={`${id}-amount`}
@@ -71,7 +73,7 @@ export function ReminderPicker({
             className={cn(control, "w-20 min-w-0")}
           />
           <label htmlFor={`${id}-unit`} className="sr-only">
-            Unit
+            {t("Unit")}
           </label>
           <select
             id={`${id}-unit`}
@@ -81,7 +83,7 @@ export function ReminderPicker({
           >
             {units.map((u) => (
               <option key={u.id} value={u.id}>
-                {u.label} before
+                {t(`${u.label} before`)}
               </option>
             ))}
           </select>

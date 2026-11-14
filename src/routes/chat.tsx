@@ -4,6 +4,7 @@ import { Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import { t, useT } from "@/lib/i18n"
 
 export const Route = createFileRoute("/chat")({ component: Chat })
 
@@ -23,6 +24,7 @@ async function askAssistant(history: Msg[]): Promise<string> {
 }
 
 function Chat() {
+  useT()
   const [messages, setMessages] = useState<Msg[]>([])
   const [text, setText] = useState("")
   const [busy, setBusy] = useState(false)
@@ -41,7 +43,7 @@ function Chat() {
       const reply = await askAssistant(next)
       setMessages((m) => [...m, { id: Date.now() + 1, role: "assistant", text: reply }])
     } catch {
-      setError("The AI couldn't reply. The chat service isn't available in this build yet.")
+      setError(t("The AI couldn't reply. The chat service isn't available in this build yet."))
     } finally {
       setBusy(false)
     }
@@ -50,14 +52,14 @@ function Chat() {
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-6 sm:px-6" style={{ minHeight: "calc(100svh - 57px)" }}>
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight">AI chat</h1>
-        <p className="text-sm text-muted-foreground mt-1">Ask for help planning, prioritising or writing up your work.</p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("AI chat")}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t("Ask for help planning, prioritising or writing up your work.")}</p>
       </header>
 
       <div className="flex flex-1 flex-col gap-3 overflow-y-auto">
         {messages.length === 0 && (
           <p className="rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
-            Try: “Break a product launch into five tasks.”
+            {t("Try: “Break a product launch into five tasks.”")}
           </p>
         )}
         {messages.map((m) => (
@@ -73,7 +75,7 @@ function Chat() {
             {m.text}
           </div>
         ))}
-        {busy && <p className="text-xs text-muted-foreground">Thinking…</p>}
+        {busy && <p className="text-xs text-muted-foreground">{t("Thinking…")}</p>}
         {error && (
           <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
             {error}
@@ -82,8 +84,8 @@ function Chat() {
       </div>
 
       <form onSubmit={send} className="flex gap-2">
-        <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Message" aria-label="Message" />
-        <Button type="submit" disabled={busy || !text.trim()} aria-label="Send">
+        <Input value={text} onChange={(e) => setText(e.target.value)} placeholder={t("Message")} aria-label={t("Message")} />
+        <Button type="submit" disabled={busy || !text.trim()} aria-label={t("Send")}>
           <Send className="size-4" />
         </Button>
       </form>

@@ -4,6 +4,7 @@ import { useCollection } from "@omg-dev/sdk"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import type { Column, Priority, Task } from "@/lib/tasks"
+import { useT } from "@/lib/i18n"
 
 export const Route = createFileRoute("/demo")({ component: Demo })
 
@@ -39,6 +40,7 @@ const steps = [
 ]
 
 function Demo() {
+  const t = useT()
   const navigate = useNavigate()
   const tasksHook = useCollection<Task>({ collection: "tasks", api: "/api/tasks" })
   const columnsHook = useCollection<Column>({ collection: "columns", api: "/api/columns" })
@@ -49,14 +51,14 @@ function Demo() {
     const cols = [...(columnsHook.data as Column[])].sort((a, b) => a.position - b.position)
     if (cols.length === 0) {
       for (const [i, c] of sampleColumns.entries()) {
-        cols.push(await columnsHook.create({ name: c.name, position: i, done: c.done }))
+        cols.push(await columnsHook.create({ name: t(c.name), position: i, done: c.done }))
       }
     }
     for (const s of samples) {
       const col = cols[Math.min(s.col, cols.length - 1)]
       await tasksHook.create({
-        title: s.title,
-        project: s.project,
+        title: t(s.title),
+        project: t(s.project),
         status: col.id,
         priority: s.priority,
         due: s.due,
@@ -70,9 +72,9 @@ function Demo() {
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-8 sm:px-6">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight">See how it works</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("See how it works")}</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Load a sample board with realistic work, then try each step yourself.
+          {t("Load a sample board with realistic work, then try each step yourself.")}
         </p>
       </header>
 
@@ -84,8 +86,8 @@ function Demo() {
                 {i + 1}
               </span>
               <div>
-                <h2 className="text-sm font-medium">{s.title}</h2>
-                <p className="text-sm text-muted-foreground">{s.text}</p>
+                <h2 className="text-sm font-medium">{t(s.title)}</h2>
+                <p className="text-sm text-muted-foreground">{t(s.text)}</p>
               </div>
             </Card>
           </li>
@@ -93,14 +95,13 @@ function Demo() {
       </ol>
 
       <Card className="gap-3 p-5">
-        <h2 className="text-sm font-medium">Ready?</h2>
+        <h2 className="text-sm font-medium">{t("Ready?")}</h2>
         <p className="text-sm text-muted-foreground">
-          This adds six example tasks across Finance, Marketing and Operations. If you have no columns yet, it
-          also adds Backlog, In progress and Done, then opens the board.
+          {t("This adds six example tasks across Finance, Marketing and Operations. If you have no columns yet, it also adds Backlog, In progress and Done, then opens the board.")}
         </p>
         <div>
           <Button size="lg" onClick={loadDemo} disabled={loading}>
-            {loading ? "Loading demo…" : "Load the demo board"}
+            {loading ? t("Loading demo…") : t("Load the demo board")}
           </Button>
         </div>
       </Card>

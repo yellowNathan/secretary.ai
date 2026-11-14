@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { BellRing, CheckCircle2, CircleAlert, Info, X } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useT } from "@/lib/i18n"
 
 // Tiny confirmation toasts: toast.success("Saved") / toast.error("...").
 // Reminders use toast.urgent / toast.info / toast.quiet.
@@ -52,6 +53,7 @@ const styles: Record<Kind, { box: string; icon: React.ReactNode }> = {
 }
 
 export function Toaster() {
+  const tr = useT()
   const [list, setList] = useState<Item[]>(items)
   useEffect(() => {
     listeners.add(setList)
@@ -77,7 +79,7 @@ export function Toaster() {
           <span className="flex-1">{t.text}</span>
           <button
             onClick={() => dismiss(t.id)}
-            aria-label="Dismiss"
+            aria-label={tr("Dismiss")}
             className="inline-flex size-11 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
           >
             <X className="size-4" aria-hidden="true" />

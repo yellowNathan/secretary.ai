@@ -1,4 +1,5 @@
 import type { CalendarEvent, Priority, Task } from "@/lib/tasks"
+import { locale, t } from "@/lib/i18n"
 
 // Dates are plain YYYY-MM-DD strings in the user's local calendar.
 
@@ -117,10 +118,10 @@ export function hms(time?: string | null): string {
 
 /** "14 Nov 2026 · 05:46:30" */
 export function formatDueFull(date: string, time?: string | null): string {
-  if (!date) return "No due date"
+  if (!date) return t("No due date")
   const d = new Date(`${date}T00:00:00`)
   if (Number.isNaN(d.getTime())) return date
-  const day = d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
+  const day = d.toLocaleDateString(locale(), { day: "numeric", month: "short", year: "numeric" })
   return `${day} · ${hms(time)}`
 }
 
@@ -130,10 +131,11 @@ export function formatDuration(ms: number): string {
   const d = Math.floor(s / 86_400); s -= d * 86_400
   const h = Math.floor(s / 3600); s -= h * 3600
   const m = Math.floor(s / 60); s -= m * 60
-  if (d) return h ? `${d}d ${h}h` : `${d}d`
-  if (h) return m ? `${h}h ${m}m` : `${h}h`
-  if (m) return s ? `${m}m ${s}s` : `${m}m`
-  return `${s}s`
+  const u = (n: number, k: "d" | "h" | "m" | "s") => `${n}${t(`unit.${k}`)}`
+  if (d) return h ? `${u(d, "d")} ${u(h, "h")}` : u(d, "d")
+  if (h) return m ? `${u(h, "h")} ${u(m, "m")}` : u(h, "h")
+  if (m) return s ? `${u(m, "m")} ${u(s, "s")}` : u(m, "m")
+  return u(s, "s")
 }
 
 export const units = [
@@ -146,11 +148,11 @@ export const units = [
 
 /** "At the due time", "10 seconds before", "1 day before" */
 export function formatOffset(sec: number | null): string {
-  if (sec == null || sec < 0) return "No reminder"
-  if (sec === 0) return "At the due time"
+  if (sec == null || sec < 0) return t("No reminder")
+  if (sec === 0) return t("At the due time")
   const unit = [...units].reverse().find((u) => sec % u.sec === 0) ?? units[0]
   const n = sec / unit.sec
-  return `${n} ${n === 1 ? unit.label.slice(0, -1) : unit.label} before`
+  return n === 1 ? t(`1 ${unit.label.slice(0, -1)} before`) : t(`{n} ${unit.label} before`, { n })
 }
 
 // Opens Google Calendar's "new event" page pre-filled with the item.
