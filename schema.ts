@@ -86,6 +86,23 @@ export default defineSchema({
         reminders: fields.string(),
       },
     }),
+    secretary_settings: collection({
+      fields: {
+        tone: fields.string(),
+        length: fields.string(),
+        default_bot: fields.string(),
+        instructions: fields.string(),
+        // forever, off, or retention period in days as an integer string.
+        history_retention: fields.string(),
+      },
+    }),
+    secretary_history: collection({
+      fields: {
+        bot: fields.string(),
+        title: fields.string(),
+        messages: fields.string(),
+      },
+    }),
     attachments: collection({
       fields: {
         // id of the task this file belongs to (empty for the Files library)

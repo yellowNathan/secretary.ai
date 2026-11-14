@@ -1,9 +1,10 @@
-import { useCallback } from "react"
+import { useCallback, useState } from "react"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { ChevronDown, Info, RotateCcw, UserPlus } from "lucide-react"
 import { Board } from "@/App"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { DemoAssistant } from "@/components/demo-assistant"
 import type { Column, Priority, Task } from "@/lib/tasks"
 import { newId, useLocalCollection } from "@/lib/local-store"
 import { t, useT } from "@/lib/i18n"
@@ -12,7 +13,7 @@ import { toast } from "@/lib/toast"
 export const Route = createFileRoute("/demo")({ component: Demo })
 
 // "/demo" — a practice board anyone can use without an account. Everything
-// stays in this browser; nothing is sent to a server.
+// stays in this browser. The signed-in demo AI sends a snapshot only when asked.
 
 function daysFromNow(n: number) {
   const d = new Date()
@@ -48,6 +49,7 @@ const steps = [
 
 function Demo() {
   const tr = useT()
+  const [demoVersion, setDemoVersion] = useState(0)
   const seedColumns = useCallback(
     () => sampleColumns.map((c, i) => ({ id: colIds[i], name: t(c.name), position: i, done: c.done }) as Column),
     [],
@@ -77,6 +79,7 @@ function Demo() {
   function startOver() {
     columnsHook.reset()
     tasksHook.reset()
+    setDemoVersion((version) => version + 1)
     toast.success(tr("Demo board reset"))
   }
 
@@ -123,6 +126,7 @@ function Demo() {
             </Button>
           </div>
         </Card>
+        <div className="mt-4"><DemoAssistant key={demoVersion} columns={columnsHook} tasks={tasksHook} /></div>
       </section>
       <Board demo columnsHook={columnsHook} tasksHook={tasksHook} events={[]} />
     </div>

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { RemindersPanel } from "@/components/reminders-panel"
+import { AccountSync } from "@/components/account-sync"
 import { MembersOnly } from "@/components/members-only"
 import { ReminderPicker } from "@/components/reminder-picker"
 import { addDays, formatOffset, hms, googleCalendarUrl, remindSeconds, todayISO } from "@/lib/reminders"
@@ -112,6 +113,7 @@ function CalendarPage() {
         <p className="mt-1 text-sm text-muted-foreground">{t("Task deadlines and your events in one place.")}</p>
       </header>
 
+      <AccountSync loading={tasksHook.loading || eventsHook.loading || columnsHook.loading} error={tasksHook.error || eventsHook.error || columnsHook.error} refresh={async () => { await Promise.all([tasksHook.refresh(), eventsHook.refresh(), columnsHook.refresh()]) }} />
       <RemindersPanel tasks={tasks} events={events} doneColumnIds={doneIds} />
 
       <Card className="gap-4 p-4">

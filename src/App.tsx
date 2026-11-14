@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, BellRing, CalendarDays, Check, Columns3, Papercl
 import { toast } from "@/lib/toast"
 import { Skeleton } from "@/components/ui/skeleton"
 import { RemindersPanel } from "@/components/reminders-panel"
+import { AccountSync } from "@/components/account-sync"
 import { Attachments } from "@/components/attachments"
 import { ReminderPicker } from "@/components/reminder-picker"
 import { dueMoment, formatDueFull, formatOffset, hms, remindSeconds } from "@/lib/reminders"
@@ -22,6 +23,7 @@ type BoardProps = {
   events: CalendarEvent[]
   /** Demo mode: data lives in this browser only, so file uploads are hidden. */
   demo?: boolean
+  sync?: React.ReactNode
 }
 
 const priorityStyle: Record<Priority, string> = {
@@ -40,10 +42,11 @@ function App() {
   const columnsHook = useCollection<Column>({ collection: "columns", api: "/api/columns" })
   const tasksHook = useCollection<Task>({ collection: "tasks", api: "/api/tasks" })
   const eventsHook = useCollection<CalendarEvent>({ collection: "events", api: "/api/events" })
-  return <Board columnsHook={columnsHook} tasksHook={tasksHook} events={eventsHook.data as CalendarEvent[]} />
+  const sync = <AccountSync loading={columnsHook.loading || tasksHook.loading || eventsHook.loading} error={columnsHook.error || tasksHook.error || eventsHook.error} refresh={async () => { await Promise.all([columnsHook.refresh(), tasksHook.refresh(), eventsHook.refresh()]) }} />
+  return <Board columnsHook={columnsHook} tasksHook={tasksHook} events={eventsHook.data as CalendarEvent[]} sync={sync} />
 }
 
-export function Board({ columnsHook, tasksHook, events, demo = false }: BoardProps) {
+export function Board({ columnsHook, tasksHook, events, demo = false, sync }: BoardProps) {
   const t = useT()
   const columns = useMemo(
     () => [...(columnsHook.data as Column[])].sort((a, b) => a.position - b.position),
@@ -131,24 +134,24 @@ export function Board({ columnsHook, tasksHook, events, demo = false }: BoardPro
     }
   }
 
-  function moveTask(task: Task, dir: -1 | 1) {
-    if (!columnIds.has(task.status)) {
-      if (columns[0]) void tasksHook.update(task.id, { status: columns[0].id })
-      return
-    }
+  async function moveTask(task: Task, dir: -1 | 1) {
     const i = columns.findIndex((c) => c.id === task.status)
-    const next = columns[i + dir]
-    if (next) void tasksHook.update(task.id, { status: next.id })
+    const next = i < 0 ? columns[0] : columns[i + dir]
+    if (!next) return
+    try { await tasksHook.update(task.id, { status: next.id }) }
+    catch { toast.error(t("Couldn't save the change. Check your connection and refresh the account data.")) }
   }
 
   async function swapColumns(index: number, dir: -1 | 1) {
     const a = columns[index]
     const b = columns[index + dir]
     if (!a || !b) return
-    await Promise.all([
-      columnsHook.update(a.id, { position: b.position }),
-      columnsHook.update(b.id, { position: a.position }),
-    ])
+    try {
+      await Promise.all([
+        columnsHook.update(a.id, { position: b.position }),
+        columnsHook.update(b.id, { position: a.position }),
+      ])
+    } catch { toast.error(t("Couldn't save the change. Check your connection and refresh the account data.")) }
   }
 
   async function removeColumn(col: Column) {
@@ -179,6 +182,7 @@ export function Board({ columnsHook, tasksHook, events, demo = false }: BoardPro
           </p>
         </header>
 
+        {sync}
         <RemindersPanel tasks={tasks} events={events} doneColumnIds={doneColumnIds} showSettingsLink={!demo} />
 
         {columns.length > 0 && (
@@ -348,14 +352,14 @@ export function Board({ columnsHook, tasksHook, events, demo = false }: BoardPro
                 doneColumnIds={doneColumnIds}
                 onMove={moveTask}
                 onDelete={deleteTask}
-                onRename={(name) => {
-                  void columnsHook.update(col.id, { name })
-                  toast.success(t("Column renamed"))
+                onRename={async (name) => {
+                  try { await columnsHook.update(col.id, { name }); toast.success(t("Column renamed")) }
+                  catch { toast.error(t("Couldn't save the change. Check your connection and refresh the account data.")) }
                 }}
                 isDone={!!col.done}
-                onToggleDone={() => {
-                  void columnsHook.update(col.id, { done: !col.done })
-                  toast.success(t(col.done ? "“{name}” is no longer a done column" : "“{name}” now counts as done", { name: col.name }))
+                onToggleDone={async () => {
+                  try { await columnsHook.update(col.id, { done: !col.done }); toast.success(t(col.done ? "“{name}” is no longer a done column" : "“{name}” now counts as done", { name: col.name })) }
+                  catch { toast.error(t("Couldn't save the change. Check your connection and refresh the account data.")) }
                 }}
                 onMoveLeft={index > 0 ? () => swapColumns(index, -1) : undefined}
                 onMoveRight={index < columns.length - 1 ? () => swapColumns(index, 1) : undefined}

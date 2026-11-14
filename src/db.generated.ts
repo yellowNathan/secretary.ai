@@ -93,6 +93,30 @@ export const preferencesSchema = z.object({
 })
 export type Preferences = z.infer<typeof preferencesSchema>
 
+export const secretary_settingsSchema = z.object({
+  id: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  _owner: z.string(),
+  tone: z.string(),
+  length: z.string(),
+  default_bot: z.string(),
+  instructions: z.string(),
+  history_retention: z.string(),
+})
+export type Secretary_settings = z.infer<typeof secretary_settingsSchema>
+
+export const secretary_historySchema = z.object({
+  id: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  _owner: z.string(),
+  bot: z.string(),
+  title: z.string(),
+  messages: z.string(),
+})
+export type Secretary_history = z.infer<typeof secretary_historySchema>
+
 export const attachmentsSchema = z.object({
   id: z.string(),
   created_at: z.string(),
@@ -150,6 +174,20 @@ export const preferencesCollection = vibesCollectionOptions({
   id: "preferences",
   schema: undefined,
   api: "/api/preferences",
+  ws: "ws://localhost:3000/ws",
+})
+
+export const secretary_settingsCollection = vibesCollectionOptions({
+  id: "secretary_settings",
+  schema: undefined,
+  api: "/api/secretary_settings",
+  ws: "ws://localhost:3000/ws",
+})
+
+export const secretary_historyCollection = vibesCollectionOptions({
+  id: "secretary_history",
+  schema: undefined,
+  api: "/api/secretary_history",
   ws: "ws://localhost:3000/ws",
 })
 
