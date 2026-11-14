@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, Link } from "@tanstack/react-router"
 import { useCollection } from "@omg-dev/sdk"
-import { AlertTriangle, Bell, BellRing, Play, RotateCcw, Save } from "lucide-react"
+import { AlertTriangle, Bell, BellRing, ChevronRight, Play, RotateCcw, Save, UserRound } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -31,7 +31,7 @@ import { useT } from "@/lib/i18n"
 export const Route = createFileRoute("/settings")({
   component: () => (
     <MembersOnly>
-      <SettingsPage />
+      <SettingsMenu />
     </MembersOnly>
   ),
 })
@@ -60,7 +60,32 @@ const levelInfo: Record<Priority, { title: string; hint: string; badge: string; 
   },
 }
 
-function SettingsPage() {
+function SettingsMenu() {
+  const t = useT()
+  return (
+    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
+      <header><h1 className="text-3xl font-semibold tracking-tight">{t("Settings")}</h1></header>
+      <nav aria-label={t("Settings")} className="grid gap-3">
+        <Link to="/account-settings" className="group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <Card className="flex-row items-center gap-4 p-4 transition-colors hover:bg-accent motion-reduce:transition-none">
+            <UserRound className="size-6 shrink-0 text-primary" aria-hidden="true" />
+            <div className="min-w-0 flex-1"><h2 className="text-lg font-semibold">{t("Account details")}</h2><p className="text-sm text-muted-foreground">{t("Edit your profile and view sign-in options.")}</p></div>
+            <ChevronRight className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+          </Card>
+        </Link>
+        <Link to="/reminder-settings" className="group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <Card className="flex-row items-center gap-4 p-4 transition-colors hover:bg-accent motion-reduce:transition-none">
+            <Bell className="size-6 shrink-0 text-primary" aria-hidden="true" />
+            <div className="min-w-0 flex-1"><h2 className="text-lg font-semibold">{t("Reminder settings")}</h2><p className="text-sm text-muted-foreground">{t("Choose how reminders get your attention.")}</p></div>
+            <ChevronRight className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+          </Card>
+        </Link>
+      </nav>
+    </main>
+  )
+}
+
+export function ReminderSettingsPage() {
   const t = useT()
   const prefs = useCollection<Preferences>({ collection: "preferences", api: "/api/preferences" })
   const row = prefs.data[0]
@@ -98,7 +123,8 @@ function SettingsPage() {
   return (
     <main className="mx-auto max-w-3xl space-y-6 px-4 pt-8 sm:px-6">
       <header className="space-y-1">
-        <h1 className="text-3xl font-semibold tracking-tight">{t("Settings")}</h1>
+        <Link to="/settings" className="text-sm text-primary underline-offset-4 hover:underline">← {t("Settings")}</Link>
+        <h1 className="text-3xl font-semibold tracking-tight">{t("Reminder settings")}</h1>
         <p className="text-base text-muted-foreground">{t("Choose how reminders get your attention.")}</p>
       </header>
 

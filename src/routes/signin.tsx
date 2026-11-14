@@ -29,6 +29,7 @@ function SignIn() {
         <EmailButton onStart={start} />
         {showFallback && <FallbackSignIn />}
         <SecureNote />
+        <p className="text-sm text-muted-foreground">{t("Passkey sign-in is not currently available in this app.")}</p>
       </Card>
       <p className="text-center text-base">
         {t("New here?")}{" "}

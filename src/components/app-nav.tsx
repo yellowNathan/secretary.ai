@@ -14,7 +14,7 @@ const memberLinks = [
   { to: "/", label: "Home", icon: Home },
   { to: "/board", label: "Board", icon: KanbanSquare },
   { to: "/calendar", label: "Calendar", icon: CalendarDays },
-  { to: "/chat", label: "AI chat", icon: Bot },
+  { to: "/chat", label: "Your secretary", icon: Bot },
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const
 const visitorLinks = [

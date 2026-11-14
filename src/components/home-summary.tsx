@@ -9,7 +9,6 @@ import {
   CalendarDays,
   CalendarPlus,
   CheckCircle2,
-  ChevronRight,
   Clock,
   KanbanSquare,
   ListTodo,
@@ -88,7 +87,7 @@ function useHomeData() {
   const name = profile?.first_name || profile?.display_name || String(user?.name || "").split(" ")[0] || ""
   const hour = new Date().getHours()
   const greeting = hour < 12 ? t("Good morning") : hour < 18 ? t("Good afternoon") : t("Good evening")
-  const loading = (tasksHook.loading || eventsHook.loading) && tasks.length === 0 && events.length === 0
+  const loading = tasksHook.loading || eventsHook.loading || columnsHook.loading
 
   return {
     ...lists,
@@ -134,7 +133,7 @@ function PhoneHome({ d }: { d: HomeData }) {
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">{d.title}</h1>
         <p className="text-base text-muted-foreground">
-          {d.dateLine} · {t("{n} open", { n: d.openCount })}
+          {d.dateLine}{!d.loading && ` · ${t("{n} open", { n: d.openCount })}`} 
         </p>
       </header>
 
@@ -190,17 +189,7 @@ function PhoneHome({ d }: { d: HomeData }) {
           </Card>
         ) : (
           <ul className="fade-in flex flex-col gap-2" key={view}>
-            {list.slice(0, 6).map((i) => <ItemRow key={`${i.kind}-${i.id}`} item={i} now={d.now} />)}
-            {list.length > 6 && (
-              <li>
-                <Link
-                  to="/board"
-                  className="flex min-h-11 items-center justify-center gap-1 rounded-lg text-base text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  {t("See all on the board")} <ChevronRight className="size-4" aria-hidden="true" />
-                </Link>
-              </li>
-            )}
+            {list.map((i) => <ItemRow key={`${i.kind}-${i.id}`} item={i} now={d.now} />)}
           </ul>
         )}
       </section>
@@ -210,16 +199,14 @@ function PhoneHome({ d }: { d: HomeData }) {
       <nav aria-label={t("Shortcuts")} className="grid grid-cols-2 gap-2">
         <Tile to="/board" icon={KanbanSquare} label={t("Board")} />
         <Tile to="/calendar" icon={CalendarPlus} label={t("Calendar")} />
-        <Tile to="/chat" icon={Bot} label={t("AI chat")} />
+        <Tile to="/chat" icon={Bot} label={t("Your secretary")} />
         <Tile to="/settings" icon={Settings} label={t("Settings")} />
       </nav>
 
       {/* The one main action, always within thumb reach. */}
       <div className="sticky bottom-0 z-20 -mx-4 border-t border-border bg-background/95 px-4 py-3 backdrop-blur">
-        <Link to="/board" className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" tabIndex={-1}>
-          <Button className="h-12 w-full text-base">
-            <Plus className="size-5" aria-hidden="true" /> {t("Add task")}
-          </Button>
+        <Link to="/board" className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary text-base font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none">
+          <Plus className="size-5" aria-hidden="true" /> {t("Add task")}
         </Link>
       </div>
     </main>
@@ -268,7 +255,7 @@ function Tile({ to, icon: Icon, label }: { to: "/board" | "/calendar" | "/chat" 
       className="flex min-h-14 items-center gap-3 rounded-xl border border-border bg-card px-4 text-base font-medium transition-colors duration-150 hover:bg-accent active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
     >
       <Icon className="size-5 shrink-0 text-primary" aria-hidden="true" />
-      <span className="truncate">{label}</span>
+      <span className="min-w-0 break-words py-2 leading-tight">{label}</span>
     </Link>
   )
 }
