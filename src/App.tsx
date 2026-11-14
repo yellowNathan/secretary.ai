@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react"
 import { useCollection } from "@omg-dev/sdk"
-import { ArrowLeft, ArrowRight, CalendarDays, Check, Paperclip, Pencil, Plus, Trash2, X } from "lucide-react"
+import { ArrowLeft, ArrowRight, CalendarDays, Check, Columns3, Paperclip, Pencil, Plus, Trash2, X } from "lucide-react"
+import { toast } from "@/lib/toast"
+import { Skeleton } from "@/components/ui/skeleton"
 import { RemindersPanel } from "@/components/reminders-panel"
 import { Attachments } from "@/components/attachments"
 import { buildReminders, todayISO } from "@/lib/reminders"
@@ -80,25 +82,44 @@ function App() {
     const name = newColumn.trim()
     if (!name) return
     const position = columns.length ? columns[columns.length - 1].position + 1 : 0
-    await columnsHook.create({ name, position, done: false })
-    setNewColumn("")
+    try {
+      await columnsHook.create({ name, position, done: false })
+      setNewColumn("")
+      toast.success(`Column “${name}” added`)
+    } catch {
+      toast.error("Couldn't add the column. Check your connection and try again.")
+    }
+  }
+
+  async function deleteTask(task: Task) {
+    try {
+      await tasksHook.remove(task.id)
+      toast.success(`Deleted “${task.title}”`)
+    } catch {
+      toast.error("Couldn't delete the task. Try again.")
+    }
   }
 
   async function addTask(e: React.FormEvent) {
     e.preventDefault()
     const clean = title.trim()
     if (!clean || !selectedColumn) return
-    await tasksHook.create({
-      title: clean,
-      project: newProject.trim() || (project !== "All" ? project : "General"),
-      status: selectedColumn,
-      priority,
-      due,
-      notes: "",
-      remind_days: Number(remind),
-    })
-    setTitle("")
-    setDue("")
+    try {
+      await tasksHook.create({
+        title: clean,
+        project: newProject.trim() || (project !== "All" ? project : "General"),
+        status: selectedColumn,
+        priority,
+        due,
+        notes: "",
+        remind_days: Number(remind),
+      })
+      setTitle("")
+      setDue("")
+      toast.success("Task added")
+    } catch {
+      toast.error("Couldn't save the task. Check your connection and try again.")
+    }
   }
 
   function moveTask(task: Task, dir: -1 | 1) {
@@ -127,104 +148,84 @@ function App() {
       ? `Delete "${col.name}"? Its ${count} task${count === 1 ? "" : "s"} will move to Unsorted.`
       : `Delete "${col.name}"?`
     if (!window.confirm(msg)) return
-    await columnsHook.remove(col.id)
+    try {
+      await columnsHook.remove(col.id)
+      toast.success(`Column “${col.name}” deleted`)
+    } catch {
+      toast.error("Couldn't delete the column. Try again.")
+    }
   }
 
   const loading = (columnsHook.loading || tasksHook.loading) && columns.length === 0 && tasks.length === 0
+  const loadError = columnsHook.error || tasksHook.error
 
   return (
-    <main className="min-h-svh bg-background text-foreground px-4 py-8 sm:px-6">
+    <main className="px-4 py-8 sm:px-6">
       <div className="mx-auto w-full max-w-6xl space-y-6">
-        <header className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">My work</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {openCount} open
-              {overdueCount > 0 && <span className="text-destructive"> · {overdueCount} overdue</span>}
-            </p>
-          </div>
-          <form onSubmit={addColumn} className="flex gap-2">
-            <Input
-              placeholder="New column"
-              value={newColumn}
-              onChange={(e) => setNewColumn(e.target.value)}
-              aria-label="New column name"
-              className="w-44"
-            />
-            <Button type="submit" variant="secondary" disabled={!newColumn.trim()}>
-              <Plus className="size-4" /> Column
-            </Button>
-          </form>
+        <header className="space-y-1">
+          <h1 className="text-3xl font-semibold tracking-tight">My work</h1>
+          <p className="text-base text-muted-foreground">
+            {openCount} open
+            {overdueCount > 0 && <span className="font-medium text-destructive"> · {overdueCount} overdue</span>}
+          </p>
         </header>
 
         <RemindersPanel reminders={reminders} />
 
         {columns.length > 0 && (
-          <form
-            onSubmit={addTask}
-            className="grid gap-2 rounded-xl border border-border bg-card p-3 sm:grid-cols-[1fr_auto_auto_auto]"
-          >
-            <Input
-              placeholder="What needs doing?"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              aria-label="Task title"
-            />
-            <Input
-              placeholder={project !== "All" ? project : "Project"}
-              value={newProject}
-              onChange={(e) => setNewProject(e.target.value)}
-              aria-label="Project"
-              list="project-options"
-              className="sm:w-36"
-            />
-            <div className="flex gap-2">
-              <select
-                aria-label="Column"
-                value={selectedColumn}
-                onChange={(e) => setColumnId(e.target.value)}
-                className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
-              >
-                {columns.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                aria-label="Priority"
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as Priority)}
-                className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
-              >
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
+          <form onSubmit={addTask} aria-label="Add a task" className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-sm">
+            <div className="space-y-2">
+              <label htmlFor="task-title" className="text-sm font-medium">New task</label>
+              <div className="flex gap-2">
+                <Input
+                  id="task-title"
+                  placeholder="What needs doing?"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="h-11 flex-1 text-base"
+                />
+                <Button type="submit" disabled={!title.trim()} className="h-11 px-5">
+                  <Plus className="size-4" aria-hidden="true" /> Add task
+                </Button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <select
-                aria-label="Remind me"
-                value={remind}
-                onChange={(e) => setRemind(e.target.value)}
-                className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
-              >
-                <option value="-1">No reminder</option>
-                <option value="0">On the day</option>
-                <option value="1">1 day before</option>
-                <option value="3">3 days before</option>
-                <option value="7">1 week before</option>
-              </select>
-              <Input
-                type="date"
-                value={due}
-                onChange={(e) => setDue(e.target.value)}
-                aria-label="Due date"
-                className="w-36"
-              />
-              <Button type="submit" disabled={!title.trim()} className="flex-1">
-                <Plus className="size-4" /> Add
-              </Button>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+              <Field label="Project" htmlFor="task-project">
+                <Input
+                  id="task-project"
+                  placeholder={project !== "All" ? project : "General"}
+                  value={newProject}
+                  onChange={(e) => setNewProject(e.target.value)}
+                  list="project-options"
+                  className="h-11"
+                />
+              </Field>
+              <Field label="Column" htmlFor="task-column">
+                <select id="task-column" value={selectedColumn} onChange={(e) => setColumnId(e.target.value)} className={selectClass}>
+                  {columns.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Priority" htmlFor="task-priority">
+                <select id="task-priority" value={priority} onChange={(e) => setPriority(e.target.value as Priority)} className={selectClass}>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              </Field>
+              <Field label="Due date" htmlFor="task-due">
+                <Input id="task-due" type="date" value={due} onChange={(e) => setDue(e.target.value)} className="h-11" />
+              </Field>
+              <Field label="Remind me" htmlFor="task-remind" className="col-span-2 sm:col-span-1">
+                <select id="task-remind" value={remind} onChange={(e) => setRemind(e.target.value)} className={selectClass}>
+                  <option value="-1">No reminder</option>
+                  <option value="0">On the day</option>
+                  <option value="1">1 day before</option>
+                  <option value="3">3 days before</option>
+                  <option value="7">1 week before</option>
+                </select>
+              </Field>
             </div>
             <datalist id="project-options">
               {projects.map((p) => (
@@ -234,35 +235,70 @@ function App() {
           </form>
         )}
 
-        {projects.length > 0 && (
-          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Projects">
-            {["All", ...projects].map((p) => (
-              <button
-                key={p}
-                role="tab"
-                aria-selected={project === p}
-                onClick={() => setProject(p)}
-                className={cn(
-                  "rounded-full border px-3 py-1 text-sm transition-colors",
-                  project === p
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "border-border text-muted-foreground hover:bg-accent",
-                )}
-              >
-                {p}
-              </button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          {projects.length > 0 ? (
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by project">
+              {["All", ...projects].map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  aria-pressed={project === p}
+                  onClick={() => setProject(p)}
+                  className={cn(
+                    "min-h-11 rounded-full border px-4 text-sm transition-colors duration-150 active:scale-[0.98]",
+                    project === p
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border text-muted-foreground hover:bg-accent hover:text-foreground",
+                  )}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <span />
+          )}
+          <form onSubmit={addColumn} className="flex gap-2" aria-label="Add a column">
+            <label htmlFor="new-column" className="sr-only">New column name</label>
+            <Input
+              id="new-column"
+              placeholder="New column, e.g. To do"
+              value={newColumn}
+              onChange={(e) => setNewColumn(e.target.value)}
+              className="h-11 flex-1 sm:w-56"
+            />
+            <Button type="submit" variant="outline" className="h-11" disabled={!newColumn.trim()}>
+              <Columns3 className="size-4" aria-hidden="true" /> Add column
+            </Button>
+          </form>
+        </div>
+
+        {loadError ? (
+          <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-base text-destructive">
+            Your board couldn't load. Check your connection, then refresh the page.
+          </div>
+        ) : loading ? (
+          <div className="grid gap-4 sm:grid-cols-3" aria-label="Loading your board">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="space-y-3">
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-28 w-full rounded-xl" />
+                <Skeleton className="h-28 w-full rounded-xl" />
+              </div>
             ))}
           </div>
-        )}
-
-        {loading ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
         ) : columns.length === 0 && unsortedTasks.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-            Create your first column above, for example “To do”, to start organising your work.
-          </p>
+          <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed border-border px-6 py-12 text-center">
+            <span className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Columns3 className="size-6" aria-hidden="true" />
+            </span>
+            <p className="max-w-sm text-base text-muted-foreground">Make your first column, like “To do”, to start organising your work.</p>
+            <Button className="h-11" onClick={() => document.getElementById("new-column")?.focus()}>
+              <Plus className="size-4" aria-hidden="true" /> Create a column
+            </Button>
+          </div>
         ) : (
-          <div className="flex gap-4 overflow-x-auto pb-2">
+          <div className="flex flex-col gap-6 md:flex-row md:gap-4 md:overflow-x-auto md:pb-2">
             {unsortedTasks.length > 0 && (
               <ColumnView
                 title="Unsorted"
@@ -272,7 +308,7 @@ function App() {
                 tasks={unsortedTasks.filter((t) => project === "All" || t.project === project)}
                 doneColumnIds={doneColumnIds}
                 onMove={moveTask}
-                onDelete={(t) => tasksHook.remove(t.id)}
+                onDelete={deleteTask}
               />
             )}
             {columns.map((col, index) => (
@@ -285,10 +321,16 @@ function App() {
                 tasks={visible.filter((t) => t.status === col.id)}
                 doneColumnIds={doneColumnIds}
                 onMove={moveTask}
-                onDelete={(t) => tasksHook.remove(t.id)}
-                onRename={(name) => columnsHook.update(col.id, { name })}
+                onDelete={deleteTask}
+                onRename={(name) => {
+                  void columnsHook.update(col.id, { name })
+                  toast.success("Column renamed")
+                }}
                 isDone={!!col.done}
-                onToggleDone={() => columnsHook.update(col.id, { done: !col.done })}
+                onToggleDone={() => {
+                  void columnsHook.update(col.id, { done: !col.done })
+                  toast.success(col.done ? `“${col.name}” is no longer a done column` : `“${col.name}” now counts as done`)
+                }}
                 onMoveLeft={index > 0 ? () => swapColumns(index, -1) : undefined}
                 onMoveRight={index < columns.length - 1 ? () => swapColumns(index, 1) : undefined}
                 onDeleteColumn={() => removeColumn(col)}
@@ -300,6 +342,21 @@ function App() {
     </main>
   )
 }
+
+const selectClass =
+  "h-11 w-full rounded-lg border border-input bg-background px-3 text-base transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+
+function Field({ label, htmlFor, className, children }: { label: string; htmlFor: string; className?: string; children: React.ReactNode }) {
+  return (
+    <div className={cn("space-y-1.5", className)}>
+      <label htmlFor={htmlFor} className="text-sm text-muted-foreground">{label}</label>
+      {children}
+    </div>
+  )
+}
+
+const iconBtn =
+  "inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40"
 
 function ColumnView({
   title,
@@ -343,51 +400,52 @@ function ColumnView({
   }
 
   return (
-    <section className="flex w-72 shrink-0 flex-col gap-3">
-      <div className="flex items-center justify-between gap-1 px-1">
+    <section aria-label={title} className="flex w-full flex-col gap-3 rounded-xl bg-muted/40 p-3 md:w-80 md:shrink-0">
+      <div className="flex items-center justify-between gap-1">
         {editing ? (
-          <form onSubmit={saveName} className="flex flex-1 gap-1">
-            <Input value={draft} onChange={(e) => setDraft(e.target.value)} aria-label="Column name" className="h-8" autoFocus />
-            <Button type="submit" variant="ghost" size="icon" aria-label="Save name"><Check className="size-4" /></Button>
-            <Button type="button" variant="ghost" size="icon" aria-label="Cancel" onClick={() => setEditing(false)}><X className="size-4" /></Button>
+          <form onSubmit={saveName} className="flex flex-1 items-center gap-1">
+            <label htmlFor={`rename-${title}`} className="sr-only">Column name</label>
+            <Input id={`rename-${title}`} value={draft} onChange={(e) => setDraft(e.target.value)} className="h-11" autoFocus />
+            <button type="submit" className={iconBtn} aria-label="Save name"><Check className="size-4" aria-hidden="true" /></button>
+            <button type="button" className={iconBtn} aria-label="Cancel renaming" onClick={() => setEditing(false)}><X className="size-4" aria-hidden="true" /></button>
           </form>
         ) : (
           <>
-            <h2 className="truncate text-sm font-medium">
-              {title} <span className="ml-1 text-xs font-normal text-muted-foreground">{count}</span>
+            <h2 className="flex min-w-0 items-center gap-2 pl-1 text-lg font-semibold">
+              <span className="truncate">{title}</span>
+              <span className="rounded-full bg-background px-2 text-sm font-normal text-muted-foreground">{count}</span>
+              {isDone && <span className="rounded-full bg-primary/10 px-2 text-xs font-medium text-primary">Done</span>}
             </h2>
             <div className="flex shrink-0 items-center">
               {onMoveLeft && (
-                <Button variant="ghost" size="icon" aria-label={`Move ${title} left`} onClick={onMoveLeft}>
-                  <ArrowLeft className="size-3.5" />
-                </Button>
+                <button className={iconBtn} aria-label={`Move ${title} column left`} onClick={onMoveLeft}>
+                  <ArrowLeft className="size-4" aria-hidden="true" />
+                </button>
               )}
               {onMoveRight && (
-                <Button variant="ghost" size="icon" aria-label={`Move ${title} right`} onClick={onMoveRight}>
-                  <ArrowRight className="size-3.5" />
-                </Button>
+                <button className={iconBtn} aria-label={`Move ${title} column right`} onClick={onMoveRight}>
+                  <ArrowRight className="size-4" aria-hidden="true" />
+                </button>
               )}
               {onToggleDone && (
-                <Button
-                  variant="ghost"
-                  size="icon"
+                <button
+                  className={cn(iconBtn, isDone && "text-primary")}
                   aria-label={isDone ? `Unmark ${title} as done` : `Mark ${title} as done`}
                   aria-pressed={isDone}
                   onClick={onToggleDone}
-                  className={cn(isDone && "text-primary")}
                 >
-                  <Check className="size-3.5" />
-                </Button>
+                  <Check className="size-4" aria-hidden="true" />
+                </button>
               )}
               {onRename && (
-                <Button variant="ghost" size="icon" aria-label={`Rename ${title}`} onClick={() => { setDraft(title); setEditing(true) }}>
-                  <Pencil className="size-3.5" />
-                </Button>
+                <button className={iconBtn} aria-label={`Rename ${title}`} onClick={() => { setDraft(title); setEditing(true) }}>
+                  <Pencil className="size-4" aria-hidden="true" />
+                </button>
               )}
               {onDeleteColumn && (
-                <Button variant="ghost" size="icon" aria-label={`Delete ${title}`} onClick={onDeleteColumn}>
-                  <Trash2 className="size-3.5" />
-                </Button>
+                <button className={cn(iconBtn, "hover:text-destructive")} aria-label={`Delete ${title} column`} onClick={onDeleteColumn}>
+                  <Trash2 className="size-4" aria-hidden="true" />
+                </button>
               )}
             </div>
           </>
@@ -395,53 +453,57 @@ function ColumnView({
       </div>
 
       {tasks.length === 0 && (
-        <p className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-          Nothing here
-        </p>
+        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border bg-background/60 p-6 text-center">
+          <Plus className="size-5 text-muted-foreground" aria-hidden="true" />
+          <p className="text-sm text-muted-foreground">No tasks yet. Add one with the form above.</p>
+        </div>
       )}
       {tasks.map((task) => {
-        const isDone = doneColumnIds.has(task.status)
+        const done = doneColumnIds.has(task.status)
         const unsorted = title === "Unsorted"
+        const overdue = isOverdue(task, doneColumnIds)
         return (
-          <Card key={task.id} className="gap-3 p-3">
+          <Card key={task.id} className="fade-in gap-3 p-4 shadow-sm transition-shadow duration-200 hover:shadow-md">
             <div className="flex items-start justify-between gap-2">
-              <p className={cn("text-sm font-medium leading-snug break-words", isDone && "line-through text-muted-foreground")}>
+              <p className={cn("pt-2 text-base font-medium leading-snug break-words", done && "text-muted-foreground line-through")}>
                 {task.title}
               </p>
-              <div className="flex shrink-0 items-center gap-1">
+              <div className="-mr-2 -mt-1 flex shrink-0 items-center">
                 <button
                   onClick={() => onToggleFiles?.(task.id)}
                   aria-label={`Files for ${task.title}`}
                   aria-pressed={openFilesId === task.id}
-                  className={cn("text-muted-foreground hover:text-foreground", openFilesId === task.id && "text-primary")}
+                  className={cn(iconBtn, openFilesId === task.id && "bg-primary/10 text-primary")}
                 >
-                  <Paperclip className="size-4" />
+                  <Paperclip className="size-4" aria-hidden="true" />
                 </button>
-              <button
-                onClick={() => onDelete(task)}
-                aria-label={`Delete ${task.title}`}
-                className="shrink-0 text-muted-foreground hover:text-destructive"
-              >
-                <Trash2 className="size-4" />
-              </button>
+                <button onClick={() => onDelete(task)} aria-label={`Delete ${task.title}`} className={cn(iconBtn, "hover:text-destructive")}>
+                  <Trash2 className="size-4" aria-hidden="true" />
+                </button>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
               {task.project && <Badge variant="outline">{task.project}</Badge>}
-              <Badge variant="outline" className={priorityStyle[task.priority]}>
+              <Badge variant="outline" className={cn("capitalize", priorityStyle[task.priority])}>
                 {task.priority}
               </Badge>
-              <span className={cn("inline-flex items-center gap-1 text-muted-foreground", isOverdue(task, doneColumnIds) && "font-medium text-destructive")}>
-                <CalendarDays className="size-3.5" />
-                {formatDue(task.due)}
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full px-2 text-muted-foreground",
+                  overdue && "bg-destructive/10 font-medium text-destructive",
+                  !overdue && task.due && !done && "bg-brand-accent/25 text-foreground",
+                )}
+              >
+                <CalendarDays className="size-3.5" aria-hidden="true" />
+                {overdue ? `Overdue · ${formatDue(task.due)}` : formatDue(task.due)}
               </span>
             </div>
-            <div className="flex justify-between">
-              <Button variant="ghost" size="sm" onClick={() => onMove(task, -1)} disabled={unsorted} aria-label="Move back">
-                <ArrowLeft className="size-4" />
+            <div className="flex justify-between border-t border-border pt-2">
+              <Button variant="ghost" className="h-11" onClick={() => onMove(task, -1)} disabled={unsorted} aria-label={`Move ${task.title} back`}>
+                <ArrowLeft className="size-4" aria-hidden="true" /> Back
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => onMove(task, 1)} aria-label="Move forward" disabled={isDone}>
-                <ArrowRight className="size-4" />
+              <Button variant="ghost" className="h-11" onClick={() => onMove(task, 1)} disabled={done} aria-label={`Move ${task.title} forward`}>
+                Next <ArrowRight className="size-4" aria-hidden="true" />
               </Button>
             </div>
             {openFilesId === task.id && <Attachments taskId={task.id} />}
