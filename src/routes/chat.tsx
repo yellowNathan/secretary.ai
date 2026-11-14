@@ -13,7 +13,8 @@ import { MembersOnly } from "@/components/members-only"
 import { useT } from "@/lib/i18n"
 import { botIds, defaultSecretarySettings, readHistory, retentionValue, type BotId, type HistoryRow, type SecretarySettings } from "@/lib/secretary"
 import { useConversationAutosave } from "@/lib/use-conversation-autosave"
-import { assistantErrorText, assistantHttpError, workspaceHttpError } from "@/lib/assistant-errors"
+import { assistantErrorText, diagnosticCode, workspaceHttpError } from "@/lib/assistant-errors"
+import { requestAssistant } from "@/lib/assistant-stream"
 import { apiFetch } from "@/lib/api-fetch"
 
 export const Route = createFileRoute("/chat")({
@@ -36,7 +37,9 @@ function transport(bot: BotId, preferences: React.RefObject<typeof defaultSecret
     async sendMessages({ messages, abortSignal }: { messages: unknown[]; abortSignal: AbortSignal | undefined }) {
       // Read a fresh snapshot for each message using the signed-in user's own collections.
       const collections = await Promise.all(["tasks", "columns", "events"].map(async (name) => {
-        const response = await apiFetch(`/api/${name}`, { signal: abortSignal })
+        let response: Response
+        try { response = await apiFetch(`/api/${name}`, { signal: abortSignal }) }
+        catch (error) { if (abortSignal?.aborted) throw error; throw new Error("AI_WORKSPACE_NETWORK") }
         if (!response.ok) throw new Error(workspaceHttpError(response.status))
         const rows = await response.json()
         if (!Array.isArray(rows)) throw new Error("AI_WORKSPACE_UNAVAILABLE")
@@ -63,21 +66,7 @@ function transport(bot: BotId, preferences: React.RefObject<typeof defaultSecret
         id: message.id, role: message.role,
         parts: [{ type: "text", text: message.parts.filter((part) => part.type === "text").map((part) => part.text ?? "").join("").slice(0, 8000) }],
       })).filter((message) => message.parts[0].text.trim())
-      const response = await apiFetch("/api/ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bot, messages: history, context, personalisation: { tone: preferences.current.tone, length: preferences.current.length, instructions: preferences.current.instructions } }), signal: abortSignal })
-      if (!response.ok) throw new Error(assistantHttpError(response.status))
-      if (!response.body) throw new Error("AI_UNAVAILABLE")
-      let buffer = ""
-      return response.body.pipeThrough(new TextDecoderStream()).pipeThrough(new TransformStream({
-        transform(chunk, controller) {
-          buffer += chunk
-          const events = buffer.split(/\r?\n\r?\n/)
-          buffer = events.pop() ?? ""
-          for (const event of events) {
-            const data = event.split(/\r?\n/).filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trimStart()).join("\n")
-            if (data && data !== "[DONE]") controller.enqueue(JSON.parse(data))
-          }
-        },
-      }))
+      return requestAssistant({ bot, messages: history, context, personalisation: { tone: preferences.current.tone, length: preferences.current.length, instructions: preferences.current.instructions } }, abortSignal)
     },
     async reconnectToStream() { return null },
   }
@@ -208,7 +197,7 @@ function Chat() {
           </div>
         })}
         {busy && <p className="text-sm text-muted-foreground">{t("Thinking…")}</p>}
-        {chat.error && <div role="alert" className="space-y-3 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-base text-destructive"><p>{t(assistantErrorText(chat.error.message))}</p><Button variant="outline" className="h-11" onClick={() => { chat.clearError(); void chat.regenerate() }} disabled={busy}>{t("Try again")}</Button></div>}
+        {chat.error && <div role="alert" className="space-y-3 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-base text-destructive"><p>{t(assistantErrorText(chat.error.message))}</p><p>{t("Diagnostic code")}: {diagnosticCode(chat.error.message)}</p><Button variant="outline" className="h-11" onClick={() => { chat.clearError(); void chat.regenerate() }} disabled={busy}>{t("Try again")}</Button></div>}
       </div>
       <form onSubmit={send} className="flex items-end gap-2">
         <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder={t("Message")} aria-label={t("Message")} maxLength={8000} rows={2} className="min-h-11 flex-1 resize-y text-base" />

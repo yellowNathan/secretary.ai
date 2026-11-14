@@ -1,16 +1,6 @@
 import { streamText, anthropic, convertToModelMessages } from "@omg-dev/ai"
 import { ctx } from "@omg-dev/server"
-
-function modelErrorCode(error: unknown): string {
-  // Do not log raw error messages: provider errors can contain request details.
-  const candidate = error && typeof error === "object" ? error as { message?: unknown; statusCode?: unknown; status?: unknown; cause?: unknown } : null
-  const cause = candidate?.cause && typeof candidate.cause === "object" ? candidate.cause as { message?: unknown; statusCode?: unknown; status?: unknown } : null
-  const messages = [candidate?.message, cause?.message].filter((m): m is string => typeof m === "string").join(" ")
-  if (/not available in your region/i.test(messages)) return "AI_REGION_UNAVAILABLE"
-  if ([candidate?.statusCode, candidate?.status, cause?.statusCode, cause?.status].some((status) => status === 429)) return "AI_RATE_LIMIT"
-  if ([candidate?.statusCode, candidate?.status, cause?.statusCode, cause?.status].some((status) => status === 401 || status === 403) || /\bforbidden\b/i.test(messages)) return "AI_PROVIDER_DENIED"
-  return "AI_UNAVAILABLE"
-}
+import { modelErrorCode } from "../src/lib/model-diagnostics"
 
 const bots: Record<string, string> = {
   general: "You are the Secretary, a versatile work assistant combining organising, project planning, writing and brainstorming. Choose the approach that fits the request. Be clear, practical and concise.",

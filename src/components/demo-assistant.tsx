@@ -10,8 +10,8 @@ import { extractActions, type AssistantAction } from "@/lib/assistant-actions"
 import type { Store } from "@/lib/local-store"
 import type { Column, Task } from "@/lib/tasks"
 import { useT } from "@/lib/i18n"
-import { assistantErrorText, assistantHttpError } from "@/lib/assistant-errors"
-import { apiFetch } from "@/lib/api-fetch"
+import { assistantErrorText, diagnosticCode } from "@/lib/assistant-errors"
+import { requestAssistant } from "@/lib/assistant-stream"
 
 type Props = { tasks: Store<Task>; columns: Store<Column> }
 
@@ -31,18 +31,7 @@ function demoTransport(snapshot: React.RefObject<Props>) {
         tasks: tasks.data.slice(0, 100).map((task) => ({ id: short(task.id), title: short(task.title), project: short(task.project), column: short(columns.data.find((c) => c.id === task.status)?.name), done: done.has(task.status), priority: task.priority, due: short(task.due), dueTime: short(task.due_time), notes: short(task.notes) })), events: [],
       }
       const history = (messages as Message[]).slice(-30).map((m) => ({ id: m.id, role: m.role, parts: [{ type: "text", text: m.parts.filter((p) => p.type === "text").map((p) => p.text || "").join("").slice(0, 8000) }] })).filter((m) => m.parts[0].text.trim())
-      const response = await apiFetch("/api/ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bot: "organiser", messages: history, context, demo: true }), signal: abortSignal })
-      if (!response.ok) throw new Error(assistantHttpError(response.status))
-      if (!response.body) throw new Error("AI_UNAVAILABLE")
-      let buffer = ""
-      return response.body.pipeThrough(new TextDecoderStream()).pipeThrough(new TransformStream({ transform(chunk, controller) {
-        buffer += chunk
-        const chunks = buffer.split(/\r?\n\r?\n/); buffer = chunks.pop() || ""
-        for (const event of chunks) {
-          const data = event.split(/\r?\n/).filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trimStart()).join("\n")
-          if (data && data !== "[DONE]") controller.enqueue(JSON.parse(data))
-        }
-      } }))
+      return requestAssistant({ bot: "organiser", messages: history, context, demo: true }, abortSignal)
     },
     async reconnectToStream() { return null },
   }
@@ -107,7 +96,7 @@ export function DemoAssistant(props: Props) {
           return <div key={m.id} className={m.role === "user" ? "ml-auto max-w-[95%] rounded-xl bg-primary p-3 text-sm text-primary-foreground" : "max-w-[95%] space-y-2 rounded-xl border border-border p-3 text-sm"}><span className="sr-only">{m.role === "user" ? t("You") : t("Demo secretary")}: </span>{visible && <p className="whitespace-pre-wrap break-words">{visible}</p>}{!streaming && parsed.actions.map((action, i) => <DemoAction key={`${m.id}-${i}`} action={action} {...props} />)}{!streaming && parsed.invalid && <p role="alert">{t("The proposed change could not be understood. Please ask again.")}</p>}</div>
         })}
         {busy && <p className="text-sm text-muted-foreground">{t("Thinking…")}</p>}
-        {chat.error && <div role="alert" className="space-y-2 text-sm text-destructive"><p>{t(assistantErrorText(chat.error.message))}</p><Button type="button" size="sm" variant="outline" onClick={() => { chat.clearError(); void chat.regenerate() }}>{t("Try again")}</Button></div>}
+        {chat.error && <div role="alert" className="space-y-2 text-sm text-destructive"><p>{t(assistantErrorText(chat.error.message))}</p><p>{t("Diagnostic code")}: {diagnosticCode(chat.error.message)}</p><Button type="button" size="sm" variant="outline" onClick={() => { chat.clearError(); void chat.regenerate() }}>{t("Try again")}</Button></div>}
       </div>
       <form onSubmit={send} className="flex items-end gap-2"><Textarea aria-label={t("Message")} placeholder={t("Message")} value={text} onChange={(e) => setText(e.target.value)} maxLength={2000} rows={1} className="min-h-11 flex-1" /><Button type="submit" size="icon" className="size-11" aria-label={t("Send")} disabled={busy || !!chat.error || !text.trim()}><Send className="size-4" /></Button></form>
     </>}
