@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react"
-import { BellRing, Info } from "lucide-react"
+import { Link } from "@tanstack/react-router"
+import { BellOff, BellRing, Info, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { playSound } from "@/components/ui/sound"
 import type { CalendarEvent, Priority, Task } from "@/lib/tasks"
 import { alertLevel, alertMoments, buildReminders, formatDuration, type Reminder } from "@/lib/reminders"
+import { describeLevel, playRingtone, useReminderSettings, type ReminderSettings } from "@/lib/reminder-settings"
 import { toast } from "@/lib/toast"
 import { cn } from "@/lib/utils"
 import { t, useT } from "@/lib/i18n"
@@ -31,16 +32,10 @@ const row: Record<Priority, string> = {
   low: "border-l-4 border-border text-muted-foreground",
 }
 
-// Alarm for urgent reminders: three sharp beeps, twice.
-const URGENT_TONES = [0, 0.25, 0.5, 1.0, 1.25, 1.5].map((delay) => ({
-  freq: 988,
-  duration: 0.16,
-  gain: 0.22,
-  type: "square" as OscillatorType,
-  delay,
-}))
-
-function alert(r: Reminder, stage: "remind" | "due" | "overdue", now: number) {
+// How each reminder alerts comes from the person's settings for its priority.
+function alert(r: Reminder, stage: "remind" | "due" | "overdue", now: number, settings: ReminderSettings) {
+  if (!settings.alerts) return
+  const level = settings.levels[r.priority]
   const text =
     stage === "due"
       ? `${r.title} · ${t(r.kind === "event" ? "starting now" : "due now")}`
@@ -49,18 +44,24 @@ function alert(r: Reminder, stage: "remind" | "due" | "overdue", now: number) {
         : `${r.title} · ${label(r, now)}`
   const canNotify = typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted"
 
-  if (r.priority === "high") {
-    toast.urgent(t("Urgent: {text}", { text }))
-    playSound(URGENT_TONES)
-    navigator.vibrate?.([300, 150, 300, 150, 600])
-    if (canNotify) new Notification(`⚠ ${t("Urgent: {text}", { text: r.title })}`, { body: text, requireInteraction: true, tag: `${r.id}:${stage}` })
-  } else if (r.priority === "medium") {
-    toast.info(t("Reminder: {text}", { text }))
-    playSound("notify")
-    if (canNotify) new Notification(r.title, { body: text, tag: `${r.id}:${stage}` })
-  } else {
-    toast.quiet(t("Low priority: {text}", { text }))
-    if (canNotify) new Notification(r.title, { body: text, silent: true, tag: `${r.id}:${stage}` })
+  const urgent = r.priority === "high"
+  const message = urgent
+    ? t("Urgent: {text}", { text })
+    : r.priority === "medium"
+      ? t("Reminder: {text}", { text })
+      : t("Low priority: {text}", { text })
+
+  if (level.popup === "stay") toast.urgent(message)
+  else if (level.popup === "brief") (r.priority === "low" ? toast.quiet : toast.info)(message)
+  playRingtone(level.ringtone, level.volume)
+  if (level.vibrate) navigator.vibrate?.(urgent ? [300, 150, 300, 150, 600] : [200, 100, 200])
+  if (canNotify && level.notify) {
+    new Notification(urgent ? `⚠ ${t("Urgent: {text}", { text: r.title })}` : r.title, {
+      body: text,
+      requireInteraction: level.popup === "stay",
+      silent: level.ringtone === "none",
+      tag: `${r.id}:${stage}`,
+    })
   }
 }
 
@@ -71,12 +72,16 @@ export function RemindersPanel({
   tasks,
   events,
   doneColumnIds,
+  showSettingsLink = true,
 }: {
   tasks: Task[]
   events: CalendarEvent[]
   doneColumnIds: Set<string>
+  /** Off in the demo, where settings aren't available. */
+  showSettingsLink?: boolean
 }) {
   useT()
+  const settings = useReminderSettings()
   const [now, setNow] = useState(() => Date.now())
   const [showLevels, setShowLevels] = useState(false)
   const supported = typeof window !== "undefined" && "Notification" in window
@@ -87,7 +92,10 @@ export function RemindersPanel({
     return () => clearInterval(t)
   }, [])
 
-  const reminders = useMemo(() => buildReminders(tasks, events, doneColumnIds, now), [tasks, events, doneColumnIds, now])
+  const reminders = useMemo(
+    () => buildReminders(tasks, events, doneColumnIds, now, settings),
+    [tasks, events, doneColumnIds, now, settings],
+  )
 
   useEffect(() => {
     let fired: string[] = []
@@ -99,7 +107,7 @@ export function RemindersPanel({
     const seen = new Set(fired)
     let changed = false
     for (const r of reminders) {
-      const due = alertMoments(r).filter((m) => m.at <= now)
+      const due = alertMoments(r, settings.levels[r.priority]).filter((m) => m.at <= now)
       const fresh = due.filter((m) => !seen.has(`${r.kind}:${r.id}:${m.at}`))
       if (fresh.length === 0) continue
       for (const m of fresh) {
@@ -110,10 +118,10 @@ export function RemindersPanel({
       changed = true
       // Only alert for the latest missed moment, and skip ones over a day old.
       const latest = fresh[fresh.length - 1]
-      if (now - latest.at <= 86_400_000) alert(r, latest.stage, now)
+      if (now - latest.at <= 86_400_000) alert(r, latest.stage, now, settings)
     }
     if (changed) localStorage.setItem(FIRED_KEY, JSON.stringify(fired.slice(-500)))
-  }, [reminders, now])
+  }, [reminders, now, settings])
 
   if (reminders.length === 0 && permission !== "default") return null
 
@@ -121,9 +129,24 @@ export function RemindersPanel({
     <Card className="gap-3 p-4" aria-live="polite">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 text-base font-semibold">
-          <BellRing className="size-5 text-primary" aria-hidden="true" /> {t("Reminders")}
+          {settings.alerts ? (
+            <BellRing className="size-5 text-primary" aria-hidden="true" />
+          ) : (
+            <BellOff className="size-5 text-muted-foreground" aria-hidden="true" />
+          )}{" "}
+          {t("Reminders")}
+          {!settings.alerts && <span className="text-sm font-normal text-muted-foreground">· {t("Alerts off")}</span>}
         </h2>
         <div className="flex items-center gap-1">
+          {showSettingsLink && (
+            <Link
+              to="/settings"
+              aria-label={t("Reminder settings")}
+              className="inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Settings className="size-4" aria-hidden="true" />
+            </Link>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -148,7 +171,7 @@ export function RemindersPanel({
             <li key={p} className="flex gap-2">
               <span className={cn("h-fit shrink-0 rounded-full px-2 text-xs font-medium capitalize", badge[p])}>{t(cap(p))}</span>
               <span>
-                <span className="font-medium">{t(alertLevel[p].label)}.</span> {t(alertLevel[p].summary)}
+                <span className="font-medium">{t(alertLevel[p].label)}.</span> {describeLevel(settings.levels[p])}
               </span>
             </li>
           ))}

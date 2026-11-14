@@ -179,7 +179,7 @@ export function Board({ columnsHook, tasksHook, events, demo = false }: BoardPro
           </p>
         </header>
 
-        <RemindersPanel tasks={tasks} events={events} doneColumnIds={doneColumnIds} />
+        <RemindersPanel tasks={tasks} events={events} doneColumnIds={doneColumnIds} showSettingsLink={!demo} />
 
         {columns.length > 0 && (
           <form onSubmit={addTask} aria-label={t("Add a task")} className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-sm">

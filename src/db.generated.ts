@@ -84,6 +84,15 @@ export const profilesSchema = z.object({
 })
 export type Profiles = z.infer<typeof profilesSchema>
 
+export const preferencesSchema = z.object({
+  id: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  _owner: z.string(),
+  reminders: z.string(),
+})
+export type Preferences = z.infer<typeof preferencesSchema>
+
 export const attachmentsSchema = z.object({
   id: z.string(),
   created_at: z.string(),
@@ -134,6 +143,13 @@ export const profilesCollection = vibesCollectionOptions({
   id: "profiles",
   schema: undefined,
   api: "/api/profiles",
+  ws: "ws://localhost:3000/ws",
+})
+
+export const preferencesCollection = vibesCollectionOptions({
+  id: "preferences",
+  schema: undefined,
+  api: "/api/preferences",
   ws: "ws://localhost:3000/ws",
 })
 

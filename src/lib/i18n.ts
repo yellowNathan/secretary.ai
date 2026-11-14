@@ -5,20 +5,34 @@ import fr from "@/lib/locales/fr"
 import de from "@/lib/locales/de"
 import es from "@/lib/locales/es"
 import it from "@/lib/locales/it"
+import ja from "@/lib/locales/ja"
+import ko from "@/lib/locales/ko"
+import th from "@/lib/locales/th"
+import vi from "@/lib/locales/vi"
+import id from "@/lib/locales/id"
+import hi from "@/lib/locales/hi"
+import { extra } from "@/lib/locales/extra"
+import { settingsDicts as s } from "@/lib/locales/settings-i18n"
 
 // App language. Keys are the British English text; every other language maps
 // that text to its own wording. Missing entries fall back to English.
 export type Dict = Record<string, string>
 
 export const languages = [
-  { code: "en-US", label: "English (US)", short: "EN-US", locale: "en-US" },
-  { code: "en-GB", label: "English (UK)", short: "EN-UK", locale: "en-GB" },
-  { code: "zh-Hant", label: "繁體中文", short: "繁", locale: "zh-TW" },
-  { code: "zh-Hans", label: "简体中文", short: "简", locale: "zh-CN" },
-  { code: "fr", label: "Français", short: "FR", locale: "fr-FR" },
-  { code: "de", label: "Deutsch", short: "DE", locale: "de-DE" },
-  { code: "es", label: "Español", short: "ES", locale: "es-ES" },
-  { code: "it", label: "Italiano", short: "IT", locale: "it-IT" },
+  { code: "en-US", label: "English (US)", short: "EN-US", locale: "en-US", group: "English" },
+  { code: "en-GB", label: "English (UK)", short: "EN-UK", locale: "en-GB", group: "English" },
+  { code: "zh-Hant", label: "繁體中文", short: "繁", locale: "zh-TW", group: "Asia" },
+  { code: "zh-Hans", label: "简体中文", short: "简", locale: "zh-CN", group: "Asia" },
+  { code: "ja", label: "日本語", short: "日本", locale: "ja-JP", group: "Asia" },
+  { code: "ko", label: "한국어", short: "한", locale: "ko-KR", group: "Asia" },
+  { code: "th", label: "ไทย", short: "TH", locale: "th-TH", group: "Asia" },
+  { code: "vi", label: "Tiếng Việt", short: "VI", locale: "vi-VN", group: "Asia" },
+  { code: "id", label: "Bahasa Indonesia", short: "ID", locale: "id-ID", group: "Asia" },
+  { code: "hi", label: "हिन्दी", short: "हि", locale: "hi-IN", group: "Asia" },
+  { code: "fr", label: "Français", short: "FR", locale: "fr-FR", group: "Europe" },
+  { code: "de", label: "Deutsch", short: "DE", locale: "de-DE", group: "Europe" },
+  { code: "es", label: "Español", short: "ES", locale: "es-ES", group: "Europe" },
+  { code: "it", label: "Italiano", short: "IT", locale: "it-IT", group: "Europe" },
 ] as const
 
 export type Lang = (typeof languages)[number]["code"]
@@ -39,12 +53,18 @@ const enUS: Dict = {
 const dicts: Record<Lang, Dict> = {
   "en-US": { ...en, ...enUS },
   "en-GB": en,
-  "zh-Hant": zhHant,
-  "zh-Hans": zhHans,
-  fr,
-  de,
-  es,
-  it,
+  "zh-Hant": { ...zhHant, ...extra.zhHant, ...s.zhHant },
+  "zh-Hans": { ...zhHans, ...extra.zhHans, ...s.zhHans },
+  ja: { ...ja, ...s.ja },
+  ko: { ...ko, ...s.ko },
+  th: { ...th, ...s.th },
+  vi: { ...vi, ...s.vi },
+  id: { ...id, ...s.id },
+  hi: { ...hi, ...s.hi },
+  fr: { ...fr, ...extra.fr, ...s.fr },
+  de: { ...de, ...extra.de, ...s.de },
+  es: { ...es, ...extra.es, ...s.es },
+  it: { ...it, ...extra.it, ...s.it },
 }
 
 const KEY = "lang"
@@ -54,7 +74,8 @@ function detect(): Lang {
   const nav = (typeof navigator !== "undefined" ? navigator.language : "en-GB").toLowerCase()
   if (nav.startsWith("zh")) return /tw|hk|mo|hant/.test(nav) ? "zh-Hant" : "zh-Hans"
   if (nav === "en-us") return "en-US"
-  for (const l of ["fr", "de", "es", "it"] as const) if (nav.startsWith(l)) return l
+  if (nav.startsWith("ms")) return "id"
+  for (const l of ["ja", "ko", "th", "vi", "id", "hi", "fr", "de", "es", "it"] as const) if (nav.startsWith(l)) return l
   return "en-GB"
 }
 

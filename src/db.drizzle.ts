@@ -77,6 +77,14 @@ export const profiles = sqlite.sqliteTable("profiles", {
   "email": sqlite.text("email"),
 })
 
+export const preferences = sqlite.sqliteTable("preferences", {
+  id: sqlite.text("id").primaryKey(),
+  created_at: sqlite.text("created_at"),
+  updated_at: sqlite.text("updated_at"),
+  _owner: sqlite.text("_owner"),
+  "reminders": sqlite.text("reminders"),
+})
+
 export const attachments = sqlite.sqliteTable("attachments", {
   id: sqlite.text("id").primaryKey(),
   created_at: sqlite.text("created_at"),
@@ -95,5 +103,6 @@ export const drizzleSchema = {
   "events": events,
   "automations": automations,
   "profiles": profiles,
+  "preferences": preferences,
   "attachments": attachments,
 }

@@ -80,6 +80,12 @@ export default defineSchema({
         email: fields.string(),
       },
     }),
+    // One row per person: their reminder settings as JSON.
+    preferences: collection({
+      fields: {
+        reminders: fields.string(),
+      },
+    }),
     attachments: collection({
       fields: {
         // id of the task this file belongs to (empty for the Files library)

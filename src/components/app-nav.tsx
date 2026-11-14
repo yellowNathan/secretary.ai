@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { Link } from "@tanstack/react-router"
 import { useAuth, useUser } from "@omg-dev/sdk"
-import { Bot, CalendarDays, Home, KanbanSquare, LogIn, LogOut, Menu, PlayCircle, UserPlus } from "lucide-react"
+import { Bot, CalendarDays, Home, KanbanSquare, LogIn, LogOut, Menu, PlayCircle, Settings, UserPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Brand } from "@/components/brand"
@@ -15,6 +15,7 @@ const memberLinks = [
   { to: "/board", label: "Board", icon: KanbanSquare },
   { to: "/calendar", label: "Calendar", icon: CalendarDays },
   { to: "/chat", label: "AI chat", icon: Bot },
+  { to: "/settings", label: "Settings", icon: Settings },
 ] as const
 const visitorLinks = [
   { to: "/", label: "Home", icon: Home },
@@ -39,7 +40,7 @@ export function AppNav() {
 
         <div className="flex items-center gap-1">
         {/* Desktop: links inline */}
-        <nav aria-label={t("Main")} className="hidden items-center gap-1 md:flex">
+        <nav aria-label={t("Main")} className="hidden items-center gap-1 lg:flex">
           {links.map((l) => (
             <Link
               key={l.to}
@@ -78,7 +79,7 @@ export function AppNav() {
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger
             render={
-              <Button variant="ghost" size="icon" className="size-11 md:hidden" aria-label={t("Open menu")}>
+              <Button variant="ghost" size="icon" className="size-11 lg:hidden" aria-label={t("Open menu")}>
                 <Menu className="size-6" aria-hidden="true" />
               </Button>
             }

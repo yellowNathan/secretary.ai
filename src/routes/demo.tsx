@@ -1,6 +1,6 @@
 import { useCallback } from "react"
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { Info, RotateCcw, UserPlus } from "lucide-react"
+import { ChevronDown, Info, RotateCcw, UserPlus } from "lucide-react"
 import { Board } from "@/App"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -93,7 +93,12 @@ function Demo() {
               </p>
             </div>
           </div>
-          <ol className="grid gap-2 sm:grid-cols-2">
+          <details className="group rounded-lg">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 rounded-lg px-1 text-base font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+              {tr("How it works")}
+              <ChevronDown className="size-5 text-muted-foreground transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none" aria-hidden="true" />
+            </summary>
+          <ol className="mt-2 grid gap-2 sm:grid-cols-2">
             {steps.map((s, i) => (
               <li key={s.title} className="flex items-start gap-3 rounded-lg bg-muted/50 p-3">
                 <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
@@ -106,6 +111,7 @@ function Demo() {
               </li>
             ))}
           </ol>
+          </details>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Link to="/signup">
               <Button className="h-11 w-full sm:w-auto">

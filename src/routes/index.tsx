@@ -2,12 +2,28 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { CalendarDays, Columns3, MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { useAuth } from "@omg-dev/sdk"
+import { Skeleton } from "@/components/ui/skeleton"
+import { HomeSummary } from "@/components/home-summary"
 import { useT } from "@/lib/i18n"
 
-// "/" — the landing page for visitors.
+// "/" — a summary of what's coming up for signed-in people, the landing page for visitors.
 export const Route = createFileRoute("/")({
-  component: Landing,
+  component: Home,
 })
+
+function Home() {
+  const { user, loading } = useAuth()
+  if (loading) {
+    return (
+      <main className="mx-auto max-w-5xl space-y-3 px-4 py-8" aria-busy="true">
+        <Skeleton className="h-9 w-1/2" />
+        <Skeleton className="h-24 w-full" />
+      </main>
+    )
+  }
+  return user ? <HomeSummary /> : <Landing />
+}
 
 const features = [
   {
@@ -40,7 +56,7 @@ function Landing() {
           {t("A simple board for your tasks. Make the columns you need, add tasks with due dates, and keep everything in order.")}
         </p>
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-          <Button size="lg" onClick={() => navigate({ to: "/signin" })}>
+          <Button size="lg" onClick={() => navigate({ to: "/signup" })}>
             {t("Sign up or sign in")}
           </Button>
           <Button size="lg" variant="outline" onClick={() => navigate({ to: "/demo" })}>

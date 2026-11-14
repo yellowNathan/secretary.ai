@@ -1,5 +1,6 @@
 import type { CalendarEvent, Priority, Task } from "@/lib/tasks"
 import { locale, t } from "@/lib/i18n"
+import { getReminderSettings, type LevelSettings, type ReminderSettings } from "@/lib/reminder-settings"
 
 // Dates are plain YYYY-MM-DD strings in the user's local calendar.
 
@@ -70,12 +71,15 @@ export const alertLevel: Record<Priority, { label: string; summary: string }> = 
   },
 }
 
-/** The moments a reminder should alert, by priority. */
-export function alertMoments(r: Reminder): { at: number; stage: "remind" | "due" | "overdue" }[] {
+/** The moments a reminder should alert, following the person's settings for its priority. */
+export function alertMoments(
+  r: Reminder,
+  level: LevelSettings = getReminderSettings().levels[r.priority],
+): { at: number; stage: "remind" | "due" | "overdue" }[] {
   const out: { at: number; stage: "remind" | "due" | "overdue" }[] = [{ at: r.remindAt, stage: "remind" }]
-  if (r.priority !== "low" && r.dueAt > r.remindAt) out.push({ at: r.dueAt, stage: "due" })
-  if (r.priority === "high" && r.kind === "task") {
-    for (let k = 1; k <= 6; k++) out.push({ at: r.dueAt + k * 10 * MIN, stage: "overdue" })
+  if (level.atDue && r.dueAt > r.remindAt) out.push({ at: r.dueAt, stage: "due" })
+  if (level.repeat > 0 && r.kind === "task") {
+    for (let k = 1; k <= 6; k++) out.push({ at: r.dueAt + k * level.repeat * MIN, stage: "overdue" })
   }
   return out
 }
@@ -88,8 +92,11 @@ export function buildReminders(
   events: CalendarEvent[],
   doneColumnIds: Set<string>,
   now: number,
+  settings: ReminderSettings = getReminderSettings(),
 ): Reminder[] {
   const out: Reminder[] = []
+  if (!settings.tasks) tasks = []
+  if (!settings.events) events = []
   for (const t of tasks) {
     const sec = remindSeconds(t)
     if (!t.due || sec == null || doneColumnIds.has(t.status)) continue
@@ -104,7 +111,7 @@ export function buildReminders(
     const dueAt = dueMoment(e.date, e.time)
     const remindAt = dueAt - sec * 1000
     if (Number.isNaN(dueAt) || now < remindAt || now > dueAt + 3_600_000) continue
-    out.push({ id: e.id, kind: "event", title: e.title, dueAt, remindAt, overdue: false, priority: "medium" })
+    out.push({ id: e.id, kind: "event", title: e.title, dueAt, remindAt, overdue: false, priority: settings.eventPriority })
   }
   // Highest priority first, then soonest due.
   return out.sort((a, b) => priorityRank[a.priority] - priorityRank[b.priority] || a.dueAt - b.dueAt)
