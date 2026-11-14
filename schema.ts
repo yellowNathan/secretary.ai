@@ -19,7 +19,12 @@ export default defineSchema({
         due: fields.date(),
         notes: fields.string(),
         // Days before the due date to remind (0 = on the day), or -1 for none.
+        // Older rows only; new rows use remind_before.
         remind_days: fields.number(),
+        // Time of day the task is due, HH:MM or HH:MM:SS (empty = 09:00).
+        due_time: fields.string(),
+        // Seconds before the due moment to remind (0 = at the due time), -1 = none.
+        remind_before: fields.number(),
       },
     }),
     events: collection({
@@ -29,7 +34,10 @@ export default defineSchema({
         time: fields.string(),
         notes: fields.string(),
         // Days before the event to remind (0 = on the day), or -1 for none.
+        // Older rows only; new rows use remind_before.
         remind_days: fields.number(),
+        // Seconds before the event starts to remind (0 = at the start), -1 = none.
+        remind_before: fields.number(),
         // How the event repeats: none, daily, weekly, monthly or yearly.
         repeat: fields.string(),
         // Last date the event repeats on (empty = forever).

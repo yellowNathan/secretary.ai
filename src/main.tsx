@@ -4,11 +4,10 @@ import { RouterProvider, createRouter } from '@tanstack/react-router'
 import './index.css'
 import './brand.css'
 
-// Follow the device's light/dark setting.
-const dark = window.matchMedia('(prefers-color-scheme: dark)')
-const applyTheme = () => document.documentElement.classList.toggle('dark', dark.matches)
-applyTheme()
-dark.addEventListener('change', applyTheme)
+import { initThemeMode } from './lib/theme-mode'
+
+// Light, dark, or follow the device (the person picks in the menu).
+initThemeMode()
 import { routeTree } from './routeTree.gen'
 
 // Routes are files: add src/routes/pricing.tsx and you have /pricing. The

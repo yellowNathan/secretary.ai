@@ -25,6 +25,8 @@ export const tasks = sqlite.sqliteTable("tasks", {
   "due": sqlite.text("due"),
   "notes": sqlite.text("notes"),
   "remind_days": sqlite.real("remind_days"),
+  "due_time": sqlite.text("due_time"),
+  "remind_before": sqlite.real("remind_before"),
 })
 
 export const events = sqlite.sqliteTable("events", {
@@ -37,6 +39,7 @@ export const events = sqlite.sqliteTable("events", {
   "time": sqlite.text("time"),
   "notes": sqlite.text("notes"),
   "remind_days": sqlite.real("remind_days"),
+  "remind_before": sqlite.real("remind_before"),
   "repeat": sqlite.text("repeat"),
   "repeat_until": sqlite.text("repeat_until"),
 })

@@ -28,6 +28,8 @@ export const tasksSchema = z.object({
   due: z.string(),
   notes: z.string(),
   remind_days: z.number(),
+  due_time: z.string(),
+  remind_before: z.number(),
 })
 export type Tasks = z.infer<typeof tasksSchema>
 
@@ -41,6 +43,7 @@ export const eventsSchema = z.object({
   time: z.string(),
   notes: z.string(),
   remind_days: z.number(),
+  remind_before: z.number(),
   repeat: z.string(),
   repeat_until: z.string(),
 })

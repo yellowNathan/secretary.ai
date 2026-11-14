@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react"
 import { useCollection } from "@omg-dev/sdk"
-import { ArrowLeft, ArrowRight, CalendarDays, Check, Columns3, Paperclip, Pencil, Plus, Trash2, X } from "lucide-react"
+import { ArrowLeft, ArrowRight, BellRing, CalendarDays, Check, Columns3, Paperclip, Pencil, Plus, Trash2, X } from "lucide-react"
 import { toast } from "@/lib/toast"
 import { Skeleton } from "@/components/ui/skeleton"
 import { RemindersPanel } from "@/components/reminders-panel"
 import { Attachments } from "@/components/attachments"
-import { buildReminders, todayISO } from "@/lib/reminders"
+import { ReminderPicker } from "@/components/reminder-picker"
+import { dueMoment, formatDueFull, formatOffset, hms, remindSeconds } from "@/lib/reminders"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -19,17 +20,9 @@ const priorityStyle: Record<Priority, string> = {
   low: "bg-muted text-muted-foreground border-border",
 }
 
-function formatDue(due: string) {
-  if (!due) return "No date"
-  const d = new Date(due.length === 10 ? `${due}T00:00:00` : due)
-  if (Number.isNaN(d.getTime())) return due
-  return d.toLocaleDateString(undefined, { day: "numeric", month: "short" })
-}
-
 function isOverdue(task: Task, doneColumnIds: Set<string>) {
   if (!task.due || doneColumnIds.has(task.status)) return false
-  const today = new Date().toISOString().slice(0, 10)
-  return task.due < today
+  return dueMoment(task.due, task.due_time) < Date.now()
 }
 
 function App() {
@@ -49,7 +42,8 @@ function App() {
   const [due, setDue] = useState("")
   const [columnId, setColumnId] = useState<string>("")
   const [newColumn, setNewColumn] = useState("")
-  const [remind, setRemind] = useState("-1")
+  const [remind, setRemind] = useState(-1)
+  const [dueTime, setDueTime] = useState("")
   const [openFilesId, setOpenFilesId] = useState<string | null>(null)
 
   const columnIds = useMemo(() => new Set(columns.map((c) => c.id)), [columns])
@@ -67,10 +61,6 @@ function App() {
   const doneColumnIds = useMemo(
     () => new Set(columns.filter((c) => c.done).map((c) => c.id)),
     [columns],
-  )
-  const reminders = useMemo(
-    () => buildReminders(tasks, eventsHook.data as CalendarEvent[], doneColumnIds, todayISO()),
-    [tasks, eventsHook.data, doneColumnIds],
   )
   const openCount = visible.filter((t) => !doneColumnIds.has(t.status)).length
   const overdueCount = visible.filter((t) => isOverdue(t, doneColumnIds)).length
@@ -112,10 +102,13 @@ function App() {
         priority,
         due,
         notes: "",
-        remind_days: Number(remind),
+        remind_days: -1,
+        due_time: dueTime,
+        remind_before: remind,
       })
       setTitle("")
       setDue("")
+      setDueTime("")
       toast.success("Task added")
     } catch {
       toast.error("Couldn't save the task. Check your connection and try again.")
@@ -170,7 +163,7 @@ function App() {
           </p>
         </header>
 
-        <RemindersPanel reminders={reminders} />
+        <RemindersPanel tasks={tasks} events={eventsHook.data as CalendarEvent[]} doneColumnIds={doneColumnIds} />
 
         {columns.length > 0 && (
           <form onSubmit={addTask} aria-label="Add a task" className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-sm">
@@ -189,7 +182,7 @@ function App() {
                 </Button>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
               <Field label="Project" htmlFor="task-project">
                 <Input
                   id="task-project"
@@ -213,19 +206,35 @@ function App() {
                   <option value="medium">Medium</option>
                   <option value="low">Low</option>
                 </select>
+                <p className="text-xs text-muted-foreground">
+                  {priority === "high" ? "Urgent alerts: sound, repeats" : priority === "medium" ? "Normal alerts: chime" : "Quiet alerts: no sound"}
+                </p>
               </Field>
-              <Field label="Due date" htmlFor="task-due">
-                <Input id="task-due" type="date" value={due} onChange={(e) => setDue(e.target.value)} className="h-11" />
+              <Field label="Due (date and time)" htmlFor="task-due" className="col-span-2">
+                <Input
+                  id="task-due"
+                  type="datetime-local"
+                  step={1}
+                  value={due ? `${due}T${hms(dueTime)}` : ""}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setDue(v.slice(0, 10))
+                    setDueTime(v.length > 10 ? hms(v.slice(11)) : "")
+                  }}
+                  className="h-11"
+                />
+                {due && (
+                  <p className="text-sm text-muted-foreground tabular-nums">Due {formatDueFull(due, dueTime)}</p>
+                )}
               </Field>
-              <Field label="Remind me" htmlFor="task-remind" className="col-span-2 sm:col-span-1">
-                <select id="task-remind" value={remind} onChange={(e) => setRemind(e.target.value)} className={selectClass}>
-                  <option value="-1">No reminder</option>
-                  <option value="0">On the day</option>
-                  <option value="1">1 day before</option>
-                  <option value="3">3 days before</option>
-                  <option value="7">1 week before</option>
-                </select>
+              <Field label="Remind me" htmlFor="task-remind" className="col-span-2 sm:col-span-3 lg:col-span-1">
+                <ReminderPicker id="task-remind" value={remind} onChange={setRemind} />
               </Field>
+              {remind >= 0 && !due && (
+                <p className="col-span-2 text-sm text-muted-foreground sm:col-span-3 lg:col-span-6">
+                  Pick a due date so the reminder knows when to go off.
+                </p>
+              )}
             </div>
             <datalist id="project-options">
               {projects.map((p) => (
@@ -495,8 +504,17 @@ function ColumnView({
                 )}
               >
                 <CalendarDays className="size-3.5" aria-hidden="true" />
-                {overdue ? `Overdue · ${formatDue(task.due)}` : formatDue(task.due)}
+                <span className="tabular-nums">
+                  {task.due ? formatDueFull(task.due, task.due_time) : "No due date"}
+                </span>
+                {overdue && <span>· Overdue</span>}
               </span>
+              {task.due && remindSeconds(task) != null && (
+                <span className="inline-flex items-center gap-1 text-muted-foreground">
+                  <BellRing className="size-3.5" aria-hidden="true" />
+                  {formatOffset(remindSeconds(task))}
+                </span>
+              )}
             </div>
             <div className="flex justify-between border-t border-border pt-2">
               <Button variant="ghost" className="h-11" onClick={() => onMove(task, -1)} disabled={unsorted} aria-label={`Move ${task.title} back`}>

@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { RemindersPanel } from "@/components/reminders-panel"
-import { addDays, buildReminders, googleCalendarUrl, todayISO } from "@/lib/reminders"
+import { ReminderPicker } from "@/components/reminder-picker"
+import { addDays, formatOffset, hms, googleCalendarUrl, remindSeconds, todayISO } from "@/lib/reminders"
+import { toast } from "@/lib/toast"
 import { cn } from "@/lib/utils"
 import type { CalendarEvent, Column, Task } from "@/lib/tasks"
 
@@ -39,10 +41,6 @@ function CalendarPage() {
   const [selected, setSelected] = useState(today)
 
   const doneIds = useMemo(() => new Set(columns.filter((c) => c.done).map((c) => c.id)), [columns])
-  const reminders = useMemo(
-    () => buildReminders(tasks, events, doneIds, today),
-    [tasks, events, doneIds, today],
-  )
 
   const days = useMemo(() => gridDays(month), [month])
   const monthLabel = new Date(`${month}T00:00:00`).toLocaleDateString(undefined, {
@@ -62,24 +60,31 @@ function CalendarPage() {
   // Event form state
   const [title, setTitle] = useState("")
   const [time, setTime] = useState("")
-  const [remind, setRemind] = useState("-1")
+  const [remind, setRemind] = useState(-1)
   const [notes, setNotes] = useState("")
 
   async function addEvent(e: React.FormEvent) {
     e.preventDefault()
     const clean = title.trim()
     if (!clean) return
-    await eventsHook.create({
-      title: clean,
-      date: selected,
-      time,
-      notes,
-      remind_days: Number(remind),
-    })
+    try {
+      await eventsHook.create({
+        title: clean,
+        date: selected,
+        time,
+        notes,
+        remind_days: -1,
+        remind_before: remind,
+      })
+      toast.success("Event added")
+    } catch {
+      toast.error("Couldn't save the event. Check your connection and try again.")
+      return
+    }
     setTitle("")
     setTime("")
     setNotes("")
-    setRemind("-1")
+    setRemind(-1)
   }
 
   const selectedTasks = tasksOn(selected)
@@ -92,7 +97,7 @@ function CalendarPage() {
         <p className="mt-1 text-sm text-muted-foreground">Task deadlines and your events in one place.</p>
       </header>
 
-      <RemindersPanel reminders={reminders} />
+      <RemindersPanel tasks={tasks} events={events} doneColumnIds={doneIds} />
 
       <Card className="gap-4 p-4">
         <div className="flex items-center justify-between">
@@ -169,11 +174,11 @@ function CalendarPage() {
           {selectedTasks.map((t) => (
             <div key={t.id} className="flex items-center justify-between gap-2 text-sm">
               <span className="min-w-0 truncate">
-                <span className="text-muted-foreground">Deadline · </span>
+                <span className="text-muted-foreground tabular-nums">Deadline {hms(t.due_time)} · </span>
                 {t.title}
               </span>
               <a
-                href={googleCalendarUrl({ title: t.title, date: selected, details: t.notes })}
+                href={googleCalendarUrl({ title: t.title, date: selected, time: t.due_time?.slice(0, 5) || undefined, details: t.notes })}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground underline-offset-4 hover:underline"
@@ -187,14 +192,17 @@ function CalendarPage() {
             <div key={e.id} className="flex items-start justify-between gap-2 text-sm">
               <div className="min-w-0">
                 <p className="truncate">
-                  {e.time && <span className="text-muted-foreground">{e.time} · </span>}
+                  {e.time && <span className="text-muted-foreground tabular-nums">{hms(e.time)} · </span>}
                   {e.title}
                 </p>
                 {e.notes && <p className="text-xs text-muted-foreground">{e.notes}</p>}
+                {remindSeconds(e) != null && (
+                  <p className="text-xs text-muted-foreground">Reminder: {formatOffset(remindSeconds(e))}</p>
+                )}
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <a
-                  href={googleCalendarUrl({ title: e.title, date: e.date, time: e.time || undefined, details: e.notes })}
+                  href={googleCalendarUrl({ title: e.title, date: e.date, time: e.time?.slice(0, 5) || undefined, details: e.notes })}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-4 hover:underline"
@@ -202,7 +210,10 @@ function CalendarPage() {
                   Google Calendar <ExternalLink className="size-3" />
                 </a>
                 <button
-                  onClick={() => eventsHook.remove(e.id)}
+                  onClick={() => {
+                    void eventsHook.remove(e.id)
+                    toast.success(`Deleted “${e.title}”`)
+                  }}
                   aria-label={`Delete ${e.title}`}
                   className="text-muted-foreground hover:text-destructive"
                 >
@@ -219,20 +230,15 @@ function CalendarPage() {
           </h2>
           <form onSubmit={addEvent} className="flex flex-col gap-2">
             <Input placeholder="Event title" value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Event title" />
-            <div className="flex gap-2">
-              <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} aria-label="Event time" className="w-32" />
-              <select
-                aria-label="Event reminder"
-                value={remind}
-                onChange={(e) => setRemind(e.target.value)}
-                className="h-9 flex-1 rounded-md border border-input bg-transparent px-2 text-sm"
-              >
-                <option value="-1">No reminder</option>
-                <option value="0">On the day</option>
-                <option value="1">1 day before</option>
-                <option value="3">3 days before</option>
-                <option value="7">1 week before</option>
-              </select>
+            <div className="grid gap-2 sm:grid-cols-[10rem_1fr]">
+              <div className="space-y-1.5">
+                <label htmlFor="event-time" className="text-sm text-muted-foreground">Time</label>
+                <Input id="event-time" type="time" step={1} value={time} onChange={(e) => setTime(e.target.value)} className="h-11" />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="event-remind" className="text-sm text-muted-foreground">Remind me</label>
+                <ReminderPicker id="event-remind" value={remind} onChange={setRemind} />
+              </div>
             </div>
             <Input placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} aria-label="Event notes" />
             <Button type="submit" disabled={!title.trim()}>Add event on {selected}</Button>

@@ -5,6 +5,7 @@ import { Bot, CalendarDays, Home, KanbanSquare, LogIn, LogOut, Menu, PlayCircle 
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Brand } from "@/components/brand"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 const links = [
   { to: "/", label: "Home", icon: Home },
@@ -43,6 +44,7 @@ export function AppNav() {
               {l.label}
             </Link>
           ))}
+          <ThemeToggle compact className="ml-2" />
           {user ? (
             <Button variant="ghost" className="ml-2 min-h-10" onClick={() => void signOut()}>
               <LogOut className="size-4" aria-hidden="true" /> Sign out
@@ -84,7 +86,11 @@ export function AppNav() {
                 </Link>
               ))}
             </nav>
-            <div className="mt-auto border-t border-border pt-4">
+            <div className="mt-auto space-y-4 border-t border-border pt-4">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Appearance</p>
+                <ThemeToggle />
+              </div>
               {user ? (
                 <Button
                   variant="outline"

@@ -10,6 +10,10 @@ export type Task = {
   notes: string
   /** days before the due date to remind; -1 or missing means no reminder */
   remind_days?: number | null
+  /** time of day the task is due, HH:MM or HH:MM:SS; empty means 09:00 */
+  due_time?: string | null
+  /** seconds before the due moment to remind; -1 means no reminder */
+  remind_before?: number | null
 }
 export type Column = { id: string; name: string; position: number; done: boolean }
 export type CalendarEvent = {
@@ -18,6 +22,7 @@ export type CalendarEvent = {
   date: string
   time: string
   notes: string
+  remind_before?: number | null
   remind_days?: number | null
   repeat?: string | null
   repeat_until?: string | null

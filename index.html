@@ -11,7 +11,15 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover"
     />
-    <title>react-ts</title>
+    <title>secretary.ai</title>
+    <!-- Apply the saved light/dark choice before the page paints (no flash). -->
+    <script>
+      try {
+        var m = localStorage.getItem("theme-mode");
+        var d = m === "dark" || (m !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+        if (d) document.documentElement.classList.add("dark");
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -49,7 +49,7 @@ export function useAutomationEngine() {
       let out = { ...task }
       for (const rule of rules.filter((r) => taskMatches(r, "task_created", task))) {
         const p = paramsOf(rule)
-        if (rule.action === "set_reminder") out = { ...out, remind_days: p.days ?? 1 }
+        if (rule.action === "set_reminder") out = { ...out, remind_before: (p.days ?? 1) * 86_400 }
         else if (rule.action === "set_priority") out = { ...out, priority: p.priority ?? "high" }
         else if (rule.action === "create_task") await createFromRule(rule)
         else if (rule.action === "notify") notify(rule.name, p.message ?? task.title)

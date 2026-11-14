@@ -1,17 +1,11 @@
-/* secretary.ai brand layer: one brand colour (indigo) for primary actions and
-   focus rings, one accent (amber) for highlights like "today" and due dates.
-   Everything else stays on the preset's neutral greys. */
+/* secretary.ai additions on top of the Design panel theme (src/theme.css).
+   Colours for primary, background etc. come from the chosen theme in both
+   light and dark mode; this only adds one highlight accent for due dates. */
 :root {
-  --primary: oklch(0.5 0.2 268);
-  --primary-foreground: oklch(0.99 0 0);
-  --ring: oklch(0.5 0.2 268);
   --brand-accent: oklch(0.78 0.15 75);
   --brand-accent-foreground: oklch(0.25 0.05 60);
 }
 .dark {
-  --primary: oklch(0.72 0.15 268);
-  --primary-foreground: oklch(0.16 0.03 268);
-  --ring: oklch(0.72 0.15 268);
   --brand-accent: oklch(0.8 0.14 75);
   --brand-accent-foreground: oklch(0.2 0.04 60);
 }
@@ -37,6 +31,11 @@
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
+}
+
+/* Smooth colour change when switching light/dark. */
+html {
+  transition: background-color 200ms ease, color 200ms ease;
 }
 
 /* Short, consistent motion; switched off for "reduce motion". */
