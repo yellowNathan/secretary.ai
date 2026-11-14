@@ -70,6 +70,11 @@ export const profiles = sqlite.sqliteTable("profiles", {
   "avatar_color": sqlite.text("avatar_color"),
   "avatar_key": sqlite.text("avatar_key"),
   "start_page": sqlite.text("start_page"),
+  "first_name": sqlite.text("first_name"),
+  "last_name": sqlite.text("last_name"),
+  "username": sqlite.text("username"),
+  "phone": sqlite.text("phone"),
+  "email": sqlite.text("email"),
 })
 
 export const attachments = sqlite.sqliteTable("attachments", {

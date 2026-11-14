@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { RemindersPanel } from "@/components/reminders-panel"
+import { MembersOnly } from "@/components/members-only"
 import { ReminderPicker } from "@/components/reminder-picker"
 import { addDays, formatOffset, hms, googleCalendarUrl, remindSeconds, todayISO } from "@/lib/reminders"
 import { toast } from "@/lib/toast"
@@ -13,7 +14,13 @@ import { cn } from "@/lib/utils"
 import { locale, useT } from "@/lib/i18n"
 import type { CalendarEvent, Column, Task } from "@/lib/tasks"
 
-export const Route = createFileRoute("/calendar")({ component: CalendarPage })
+export const Route = createFileRoute("/calendar")({
+  component: () => (
+    <MembersOnly>
+      <CalendarPage />
+    </MembersOnly>
+  ),
+})
 
 // Short weekday names in the chosen language, Sunday first (2023-01-01 was a Sunday).
 function weekdayNames(): string[] {

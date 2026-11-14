@@ -72,6 +72,12 @@ export default defineSchema({
         avatar_key: fields.string(),
         // page to open after sign-in: home | board | calendar
         start_page: fields.string(),
+        // Filled in on the sign-up form.
+        first_name: fields.string(),
+        last_name: fields.string(),
+        username: fields.string(),
+        phone: fields.string(),
+        email: fields.string(),
       },
     }),
     attachments: collection({

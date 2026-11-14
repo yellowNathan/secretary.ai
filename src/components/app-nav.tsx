@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { Link } from "@tanstack/react-router"
 import { useAuth, useUser } from "@omg-dev/sdk"
-import { Bot, CalendarDays, Home, KanbanSquare, LogIn, LogOut, Menu, PlayCircle } from "lucide-react"
+import { Bot, CalendarDays, Home, KanbanSquare, LogIn, LogOut, Menu, PlayCircle, UserPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Brand } from "@/components/brand"
@@ -9,11 +9,15 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { LanguageMenu } from "@/components/language-menu"
 import { useT } from "@/lib/i18n"
 
-const links = [
+// Signed-in people get their workspace; visitors only see Home and the demo.
+const memberLinks = [
   { to: "/", label: "Home", icon: Home },
   { to: "/board", label: "Board", icon: KanbanSquare },
   { to: "/calendar", label: "Calendar", icon: CalendarDays },
   { to: "/chat", label: "AI chat", icon: Bot },
+] as const
+const visitorLinks = [
+  { to: "/", label: "Home", icon: Home },
   { to: "/demo", label: "Demo", icon: PlayCircle },
 ] as const
 
@@ -24,10 +28,9 @@ const linkActive = { className: "bg-accent text-foreground font-medium" }
 export function AppNav() {
   const t = useT()
   const user = useUser()
-  const { signOut } = useAuth()
+  const { signOut, loading } = useAuth()
   const [open, setOpen] = useState(false)
-  // Signed-in people don't need the Demo link in the desktop bar.
-  const desktopLinks = links.filter((l) => !(user && l.to === "/demo"))
+  const links = user ? memberLinks : visitorLinks
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
@@ -37,7 +40,7 @@ export function AppNav() {
         <div className="flex items-center gap-1">
         {/* Desktop: links inline */}
         <nav aria-label={t("Main")} className="hidden items-center gap-1 md:flex">
-          {desktopLinks.map((l) => (
+          {links.map((l) => (
             <Link
               key={l.to}
               to={l.to}
@@ -53,12 +56,19 @@ export function AppNav() {
             <Button variant="ghost" className="ml-2 min-h-10" onClick={() => void signOut()}>
               <LogOut className="size-4" aria-hidden="true" /> {t("Sign out")}
             </Button>
-          ) : (
-            <Link to="/signin" className="ml-2">
-              <Button className="min-h-10">
-                <LogIn className="size-4" aria-hidden="true" /> {t("Sign in")}
-              </Button>
-            </Link>
+          ) : loading ? null : (
+            <>
+              <Link to="/signin" className="ml-2">
+                <Button variant="ghost" className="min-h-10">
+                  <LogIn className="size-4" aria-hidden="true" /> {t("Sign in")}
+                </Button>
+              </Link>
+              <Link to="/signup">
+                <Button className="min-h-10">
+                  <UserPlus className="size-4" aria-hidden="true" /> {t("Sign up")}
+                </Button>
+              </Link>
+            </>
           )}
         </nav>
 
@@ -109,11 +119,18 @@ export function AppNav() {
                   <LogOut className="size-4" aria-hidden="true" /> {t("Sign out")}
                 </Button>
               ) : (
-                <Link to="/signin" onClick={() => setOpen(false)}>
-                  <Button className="h-11 w-full">
-                    <LogIn className="size-4" aria-hidden="true" /> {t("Sign in")}
-                  </Button>
-                </Link>
+                <div className="grid gap-2">
+                  <Link to="/signup" onClick={() => setOpen(false)}>
+                    <Button className="h-11 w-full">
+                      <UserPlus className="size-4" aria-hidden="true" /> {t("Sign up")}
+                    </Button>
+                  </Link>
+                  <Link to="/signin" onClick={() => setOpen(false)}>
+                    <Button variant="outline" className="h-11 w-full">
+                      <LogIn className="size-4" aria-hidden="true" /> {t("Sign in")}
+                    </Button>
+                  </Link>
+                </div>
               )}
             </div>
           </SheetContent>

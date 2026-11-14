@@ -61,3 +61,12 @@ export type Profile = {
   avatar_key: string
   start_page: string
 }
+
+/** Sign-up details stored on the profile (older profiles may not have them). */
+export type ProfileDetails = Profile & {
+  first_name?: string
+  last_name?: string
+  username?: string
+  phone?: string
+  email?: string
+}

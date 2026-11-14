@@ -1,6 +1,7 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router"
-import { VibesAuthProvider } from "@omg-dev/sdk"
+import { VibesAuthProvider, useUser } from "@omg-dev/sdk"
 import { AppNav } from "@/components/app-nav"
+import { ProfileSync } from "@/components/profile-sync"
 import { Toaster } from "@/lib/toast"
 import { useT } from "@/lib/i18n"
 
@@ -13,7 +14,9 @@ export const Route = createRootRoute({
 function Shell() {
   const t = useT()
   return (
-    <VibesAuthProvider>
+    // No automatic sign-in pop-up: people sign in only when they press the button.
+    <VibesAuthProvider autoPrompt={false}>
+      <SignedInOnly />
       <div className="min-h-svh overflow-x-hidden bg-background text-foreground">
         <a
           href="#main"
@@ -29,4 +32,10 @@ function Shell() {
       <Toaster />
     </VibesAuthProvider>
   )
+}
+
+// Saves sign-up details once someone comes back signed in.
+function SignedInOnly() {
+  const user = useUser()
+  return user ? <ProfileSync /> : null
 }

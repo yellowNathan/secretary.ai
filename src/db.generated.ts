@@ -76,6 +76,11 @@ export const profilesSchema = z.object({
   avatar_color: z.string(),
   avatar_key: z.string(),
   start_page: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  username: z.string(),
+  phone: z.string(),
+  email: z.string(),
 })
 export type Profiles = z.infer<typeof profilesSchema>
 

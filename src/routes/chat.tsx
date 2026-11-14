@@ -4,9 +4,16 @@ import { Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import { MembersOnly } from "@/components/members-only"
 import { t, useT } from "@/lib/i18n"
 
-export const Route = createFileRoute("/chat")({ component: Chat })
+export const Route = createFileRoute("/chat")({
+  component: () => (
+    <MembersOnly>
+      <Chat />
+    </MembersOnly>
+  ),
+})
 
 type Msg = { id: number; role: "user" | "assistant"; text: string }
 

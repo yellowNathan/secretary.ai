@@ -1,14 +1,18 @@
-import { useState } from "react"
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { useCollection } from "@omg-dev/sdk"
+import { useCallback } from "react"
+import { createFileRoute, Link } from "@tanstack/react-router"
+import { Info, RotateCcw, UserPlus } from "lucide-react"
+import { Board } from "@/App"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import type { Column, Priority, Task } from "@/lib/tasks"
-import { useT } from "@/lib/i18n"
+import { newId, useLocalCollection } from "@/lib/local-store"
+import { t, useT } from "@/lib/i18n"
+import { toast } from "@/lib/toast"
 
 export const Route = createFileRoute("/demo")({ component: Demo })
 
-// "/demo" — a short walkthrough that loads sample work, then opens the board.
+// "/demo" — a practice board anyone can use without an account. Everything
+// stays in this browser; nothing is sent to a server.
 
 function daysFromNow(n: number) {
   const d = new Date()
@@ -23,14 +27,17 @@ const sampleColumns = [
 ]
 
 // `col` is an index into sampleColumns.
-const samples: { title: string; project: string; col: number; priority: Priority; due: string }[] = [
-  { title: "Draft Q3 report", project: "Finance", col: 1, priority: "high", due: daysFromNow(2) },
-  { title: "Review vendor invoices", project: "Finance", col: 0, priority: "medium", due: daysFromNow(-1) },
-  { title: "Plan product launch", project: "Marketing", col: 0, priority: "high", due: daysFromNow(7) },
-  { title: "Write launch email", project: "Marketing", col: 0, priority: "low", due: daysFromNow(10) },
-  { title: "Book team offsite", project: "Operations", col: 2, priority: "low", due: daysFromNow(-3) },
-  { title: "Update onboarding doc", project: "Operations", col: 1, priority: "medium", due: daysFromNow(4) },
+const samples: { title: string; project: string; col: number; priority: Priority; due: number; time: string; remind: number }[] = [
+  { title: "Draft Q3 report", project: "Finance", col: 1, priority: "high", due: 2, time: "17:00:00", remind: 3600 },
+  { title: "Review vendor invoices", project: "Finance", col: 0, priority: "medium", due: -1, time: "12:00:00", remind: -1 },
+  { title: "Plan product launch", project: "Marketing", col: 0, priority: "high", due: 7, time: "10:00:00", remind: 86400 },
+  { title: "Write launch email", project: "Marketing", col: 0, priority: "low", due: 10, time: "09:00:00", remind: -1 },
+  { title: "Book team offsite", project: "Operations", col: 2, priority: "low", due: -3, time: "15:30:00", remind: -1 },
+  { title: "Update onboarding doc", project: "Operations", col: 1, priority: "medium", due: 4, time: "11:00:00", remind: 1800 },
 ]
+
+// Fixed ids so the sample tasks land in the right sample columns.
+const colIds = ["demo-col-0", "demo-col-1", "demo-col-2"]
 
 const steps = [
   { title: "Make your columns", text: "Name the stages your work goes through, like Backlog, In progress and Done." },
@@ -40,71 +47,78 @@ const steps = [
 ]
 
 function Demo() {
-  const t = useT()
-  const navigate = useNavigate()
-  const tasksHook = useCollection<Task>({ collection: "tasks", api: "/api/tasks" })
-  const columnsHook = useCollection<Column>({ collection: "columns", api: "/api/columns" })
-  const [loading, setLoading] = useState(false)
+  const tr = useT()
+  const seedColumns = useCallback(
+    () => sampleColumns.map((c, i) => ({ id: colIds[i], name: t(c.name), position: i, done: c.done }) as Column),
+    [],
+  )
+  const seedTasks = useCallback(
+    () =>
+      samples.map(
+        (s) =>
+          ({
+            id: newId(),
+            title: t(s.title),
+            project: t(s.project),
+            status: colIds[s.col],
+            priority: s.priority,
+            due: daysFromNow(s.due),
+            due_time: s.time,
+            remind_before: s.remind,
+            remind_days: -1,
+            notes: "",
+          }) as Task,
+      ),
+    [],
+  )
+  const columnsHook = useLocalCollection<Column>("demo:columns", seedColumns)
+  const tasksHook = useLocalCollection<Task>("demo:tasks", seedTasks)
 
-  async function loadDemo() {
-    setLoading(true)
-    const cols = [...(columnsHook.data as Column[])].sort((a, b) => a.position - b.position)
-    if (cols.length === 0) {
-      for (const [i, c] of sampleColumns.entries()) {
-        cols.push(await columnsHook.create({ name: t(c.name), position: i, done: c.done }))
-      }
-    }
-    for (const s of samples) {
-      const col = cols[Math.min(s.col, cols.length - 1)]
-      await tasksHook.create({
-        title: t(s.title),
-        project: t(s.project),
-        status: col.id,
-        priority: s.priority,
-        due: s.due,
-        notes: "",
-      })
-    }
-    setLoading(false)
-    navigate({ to: "/board" })
+  function startOver() {
+    columnsHook.reset()
+    tasksHook.reset()
+    toast.success(tr("Demo board reset"))
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-8 sm:px-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">{t("See how it works")}</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {t("Load a sample board with realistic work, then try each step yourself.")}
-        </p>
-      </header>
-
-      <ol className="flex flex-col gap-3">
-        {steps.map((s, i) => (
-          <li key={s.title}>
-            <Card className="flex-row items-start gap-4 p-4">
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
-                {i + 1}
-              </span>
-              <div>
-                <h2 className="text-sm font-medium">{t(s.title)}</h2>
-                <p className="text-sm text-muted-foreground">{t(s.text)}</p>
-              </div>
-            </Card>
-          </li>
-        ))}
-      </ol>
-
-      <Card className="gap-3 p-5">
-        <h2 className="text-sm font-medium">{t("Ready?")}</h2>
-        <p className="text-sm text-muted-foreground">
-          {t("This adds six example tasks across Finance, Marketing and Operations. If you have no columns yet, it also adds Backlog, In progress and Done, then opens the board.")}
-        </p>
-        <div>
-          <Button size="lg" onClick={loadDemo} disabled={loading}>
-            {loading ? t("Loading demo…") : t("Load the demo board")}
-          </Button>
-        </div>
-      </Card>
-    </main>
+    <div>
+      <section className="mx-auto w-full max-w-5xl px-4 pt-6 sm:px-6">
+        <Card className="gap-4 p-4 sm:p-5">
+          <div className="flex items-start gap-3">
+            <Info className="mt-1 size-5 shrink-0 text-primary" aria-hidden="true" />
+            <div className="space-y-1">
+              <h1 className="text-xl font-semibold tracking-tight">{tr("You're trying the demo")}</h1>
+              <p className="text-base text-muted-foreground">
+                {tr("No account needed. Changes stay on this device only. Sign up to save your work everywhere.")}
+              </p>
+            </div>
+          </div>
+          <ol className="grid gap-2 sm:grid-cols-2">
+            {steps.map((s, i) => (
+              <li key={s.title} className="flex items-start gap-3 rounded-lg bg-muted/50 p-3">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+                  {i + 1}
+                </span>
+                <div>
+                  <h2 className="text-sm font-medium">{tr(s.title)}</h2>
+                  <p className="text-sm text-muted-foreground">{tr(s.text)}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Link to="/signup">
+              <Button className="h-11 w-full sm:w-auto">
+                <UserPlus className="size-4" aria-hidden="true" /> {tr("Sign up to save your work")}
+              </Button>
+            </Link>
+            <Button variant="outline" className="h-11" onClick={startOver}>
+              <RotateCcw className="size-4" aria-hidden="true" /> {tr("Start over")}
+            </Button>
+          </div>
+        </Card>
+      </section>
+      <Board demo columnsHook={columnsHook} tasksHook={tasksHook} events={[]} />
+    </div>
   )
 }

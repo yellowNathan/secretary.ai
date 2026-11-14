@@ -14,6 +14,15 @@ import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { useT } from "@/lib/i18n"
 import type { CalendarEvent, Column, Priority, Task } from "@/lib/tasks"
+import type { Store } from "@/lib/local-store"
+
+type BoardProps = {
+  columnsHook: Store<Column>
+  tasksHook: Store<Task>
+  events: CalendarEvent[]
+  /** Demo mode: data lives in this browser only, so file uploads are hidden. */
+  demo?: boolean
+}
 
 const priorityStyle: Record<Priority, string> = {
   high: "bg-destructive/15 text-destructive border-destructive/30",
@@ -26,16 +35,21 @@ function isOverdue(task: Task, doneColumnIds: Set<string>) {
   return dueMoment(task.due, task.due_time) < Date.now()
 }
 
+// The saved board for signed-in people.
 function App() {
-  const t = useT()
   const columnsHook = useCollection<Column>({ collection: "columns", api: "/api/columns" })
   const tasksHook = useCollection<Task>({ collection: "tasks", api: "/api/tasks" })
+  const eventsHook = useCollection<CalendarEvent>({ collection: "events", api: "/api/events" })
+  return <Board columnsHook={columnsHook} tasksHook={tasksHook} events={eventsHook.data as CalendarEvent[]} />
+}
+
+export function Board({ columnsHook, tasksHook, events, demo = false }: BoardProps) {
+  const t = useT()
   const columns = useMemo(
     () => [...(columnsHook.data as Column[])].sort((a, b) => a.position - b.position),
     [columnsHook.data],
   )
   const tasks = tasksHook.data as Task[]
-  const eventsHook = useCollection<CalendarEvent>({ collection: "events", api: "/api/events" })
 
   const [project, setProject] = useState<string>("All")
   const [title, setTitle] = useState("")
@@ -158,14 +172,14 @@ function App() {
     <main className="px-4 py-8 sm:px-6">
       <div className="mx-auto w-full max-w-6xl space-y-6">
         <header className="space-y-1">
-          <h1 className="text-3xl font-semibold tracking-tight">{t("My work")}</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">{t(demo ? "Demo board" : "My work")}</h1>
           <p className="text-base text-muted-foreground">
             {t("{n} open", { n: openCount })}
             {overdueCount > 0 && <span className="font-medium text-destructive"> · {t("{n} overdue", { n: overdueCount })}</span>}
           </p>
         </header>
 
-        <RemindersPanel tasks={tasks} events={eventsHook.data as CalendarEvent[]} doneColumnIds={doneColumnIds} />
+        <RemindersPanel tasks={tasks} events={events} doneColumnIds={doneColumnIds} />
 
         {columns.length > 0 && (
           <form onSubmit={addTask} aria-label={t("Add a task")} className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-sm">
@@ -315,7 +329,7 @@ function App() {
                 title={t("Unsorted")}
                 unsorted
                 openFilesId={openFilesId}
-                onToggleFiles={(id) => setOpenFilesId((cur) => (cur === id ? null : id))}
+                onToggleFiles={demo ? undefined : (id) => setOpenFilesId((cur) => (cur === id ? null : id))}
                 count={unsortedTasks.length}
                 tasks={unsortedTasks.filter((t) => project === "All" || t.project === project)}
                 doneColumnIds={doneColumnIds}
@@ -328,7 +342,7 @@ function App() {
                 key={col.id}
                 title={col.name}
                 openFilesId={openFilesId}
-                onToggleFiles={(id) => setOpenFilesId((cur) => (cur === id ? null : id))}
+                onToggleFiles={demo ? undefined : (id) => setOpenFilesId((cur) => (cur === id ? null : id))}
                 count={visible.filter((t) => t.status === col.id).length}
                 tasks={visible.filter((t) => t.status === col.id)}
                 doneColumnIds={doneColumnIds}
@@ -483,14 +497,16 @@ function ColumnView({
                 {task.title}
               </p>
               <div className="-mr-2 -mt-1 flex shrink-0 items-center">
-                <button
-                  onClick={() => onToggleFiles?.(task.id)}
-                  aria-label={t("Files for {name}", { name: task.title })}
-                  aria-pressed={openFilesId === task.id}
-                  className={cn(iconBtn, openFilesId === task.id && "bg-primary/10 text-primary")}
-                >
-                  <Paperclip className="size-4" aria-hidden="true" />
-                </button>
+                {onToggleFiles && (
+                  <button
+                    onClick={() => onToggleFiles(task.id)}
+                    aria-label={t("Files for {name}", { name: task.title })}
+                    aria-pressed={openFilesId === task.id}
+                    className={cn(iconBtn, openFilesId === task.id && "bg-primary/10 text-primary")}
+                  >
+                    <Paperclip className="size-4" aria-hidden="true" />
+                  </button>
+                )}
                 <button onClick={() => onDelete(task)} aria-label={t("Delete {name}", { name: task.title })} className={cn(iconBtn, "hover:text-destructive")}>
                   <Trash2 className="size-4" aria-hidden="true" />
                 </button>
