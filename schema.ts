@@ -86,6 +86,12 @@ export default defineSchema({
         reminders: fields.string(),
       },
     }),
+    task_cleanup_settings: collection({
+      fields: {
+        days: fields.number(),
+        enabled_at: fields.string(),
+      },
+    }),
     secretary_settings: collection({
       fields: {
         tone: fields.string(),

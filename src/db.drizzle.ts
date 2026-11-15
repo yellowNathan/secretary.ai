@@ -85,6 +85,15 @@ export const preferences = sqlite.sqliteTable("preferences", {
   "reminders": sqlite.text("reminders"),
 })
 
+export const task_cleanup_settings = sqlite.sqliteTable("task_cleanup_settings", {
+  id: sqlite.text("id").primaryKey(),
+  created_at: sqlite.text("created_at"),
+  updated_at: sqlite.text("updated_at"),
+  _owner: sqlite.text("_owner"),
+  "days": sqlite.real("days"),
+  "enabled_at": sqlite.text("enabled_at"),
+})
+
 export const secretary_settings = sqlite.sqliteTable("secretary_settings", {
   id: sqlite.text("id").primaryKey(),
   created_at: sqlite.text("created_at"),
@@ -126,6 +135,7 @@ export const drizzleSchema = {
   "automations": automations,
   "profiles": profiles,
   "preferences": preferences,
+  "task_cleanup_settings": task_cleanup_settings,
   "secretary_settings": secretary_settings,
   "secretary_history": secretary_history,
   "attachments": attachments,

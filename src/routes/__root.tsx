@@ -4,6 +4,7 @@ import { AppNav } from "@/components/app-nav"
 import { ProfileSync } from "@/components/profile-sync"
 import { ReminderSettingsSync } from "@/components/reminder-settings-sync"
 import { HistoryRetentionSync } from "@/components/history-retention-sync"
+import { DoneTaskCleanupSync } from "@/components/done-task-cleanup-sync"
 import { Toaster } from "@/lib/toast"
 import { useT } from "@/lib/i18n"
 
@@ -23,5 +24,5 @@ function Shell() {
 function SignedInOnly() {
   const user = useUser()
   if (!user) return null
-  return <><ProfileSync /><ReminderSettingsSync /><HistoryRetentionSync /></>
+  return <><ProfileSync /><ReminderSettingsSync /><HistoryRetentionSync /><DoneTaskCleanupSync /></>
 }

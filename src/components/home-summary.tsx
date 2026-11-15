@@ -25,6 +25,7 @@ import { addDays, dueMoment, formatDueFull, formatDuration, todayISO } from "@/l
 import type { CalendarEvent, Column, ProfileDetails, Task } from "@/lib/tasks"
 import { cn } from "@/lib/utils"
 import { locale, useT } from "@/lib/i18n"
+import { useCleanupRefresh } from "@/lib/use-cleanup-refresh"
 
 type Item = { id: string; kind: "task" | "event"; title: string; at: number; date: string; time: string; priority?: Task["priority"]; project?: string }
 
@@ -50,6 +51,7 @@ function useHomeData() {
   const t = useT()
   const user = useUser()
   const tasksHook = useCollection<Task>({ collection: "tasks", api: "/api/tasks" })
+  useCleanupRefresh(tasksHook.refresh)
   const columnsHook = useCollection<Column>({ collection: "columns", api: "/api/columns" })
   const eventsHook = useCollection<CalendarEvent>({ collection: "events", api: "/api/events" })
   const profilesHook = useCollection<ProfileDetails>({ collection: "profiles", api: "/api/profiles" })
@@ -94,6 +96,7 @@ function useHomeData() {
     tasks,
     events,
     doneColumnIds,
+    remindersReady: !columnsHook.loading && !columnsHook.error,
     now,
     loading,
     title: name ? t("{greeting}, {name}", { greeting, name }) : greeting,
@@ -194,7 +197,7 @@ function PhoneHome({ d }: { d: HomeData }) {
         )}
       </section>
 
-      <RemindersPanel tasks={d.tasks} events={d.events} doneColumnIds={d.doneColumnIds} />
+      <RemindersPanel tasks={d.remindersReady ? d.tasks : []} events={d.events} doneColumnIds={d.doneColumnIds} />
 
       <nav aria-label={t("Shortcuts")} className="grid grid-cols-2 gap-2">
         <Tile to="/board" icon={KanbanSquare} label={t("Board")} />
@@ -297,7 +300,7 @@ function WideHome({ d }: { d: HomeData }) {
         ))}
       </section>
 
-      <RemindersPanel tasks={d.tasks} events={d.events} doneColumnIds={d.doneColumnIds} />
+      <RemindersPanel tasks={d.remindersReady ? d.tasks : []} events={d.events} doneColumnIds={d.doneColumnIds} />
 
       <div className="grid gap-6 md:grid-cols-2">
         <section className="flex flex-col gap-3" aria-labelledby="coming-up">

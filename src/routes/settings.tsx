@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useCollection } from "@omg-dev/sdk"
-import { AlertTriangle, Bell, BellRing, ChevronRight, Play, RotateCcw, Save, UserRound } from "lucide-react"
+import { AlertTriangle, Bell, BellRing, ChevronRight, Play, RotateCcw, Save, UserRound, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -77,6 +77,13 @@ function SettingsMenu() {
           <Card className="flex-row items-center gap-4 p-4 transition-colors hover:bg-accent motion-reduce:transition-none">
             <Bell className="size-6 shrink-0 text-primary" aria-hidden="true" />
             <div className="min-w-0 flex-1"><h2 className="text-lg font-semibold">{t("Reminder settings")}</h2><p className="text-sm text-muted-foreground">{t("Choose how reminders get your attention.")}</p></div>
+            <ChevronRight className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+          </Card>
+        </Link>
+        <Link to="/task-cleanup-settings" className="group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <Card className="flex-row items-center gap-4 p-4 transition-colors hover:bg-accent motion-reduce:transition-none">
+            <Trash2 className="size-6 shrink-0 text-primary" aria-hidden="true" />
+            <div className="min-w-0 flex-1"><h2 className="text-lg font-semibold">{t("Done task cleanup")}</h2><p className="text-sm text-muted-foreground">{t("Choose when completed tasks are automatically deleted.")}</p></div>
             <ChevronRight className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
           </Card>
         </Link>

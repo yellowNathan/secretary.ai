@@ -14,6 +14,7 @@ import { toast } from "@/lib/toast"
 import { cn } from "@/lib/utils"
 import { locale, useT } from "@/lib/i18n"
 import type { CalendarEvent, Column, Task } from "@/lib/tasks"
+import { useCleanupRefresh } from "@/lib/use-cleanup-refresh"
 
 export const Route = createFileRoute("/calendar")({
   component: () => (
@@ -46,6 +47,7 @@ function CalendarPage() {
   const t = useT()
   const weekdays = weekdayNames()
   const tasksHook = useCollection<Task>({ collection: "tasks", api: "/api/tasks" })
+  useCleanupRefresh(tasksHook.refresh)
   const eventsHook = useCollection<CalendarEvent>({ collection: "events", api: "/api/events" })
   const columnsHook = useCollection<Column>({ collection: "columns", api: "/api/columns" })
   const tasks = tasksHook.data as Task[]
@@ -114,7 +116,7 @@ function CalendarPage() {
       </header>
 
       <AccountSync loading={tasksHook.loading || eventsHook.loading || columnsHook.loading} error={tasksHook.error || eventsHook.error || columnsHook.error} refresh={async () => { await Promise.all([tasksHook.refresh(), eventsHook.refresh(), columnsHook.refresh()]) }} />
-      <RemindersPanel tasks={tasks} events={events} doneColumnIds={doneIds} />
+      <RemindersPanel tasks={!columnsHook.loading && !columnsHook.error ? tasks : []} events={events} doneColumnIds={doneIds} />
 
       <Card className="gap-4 p-4">
         <div className="flex items-center justify-between">

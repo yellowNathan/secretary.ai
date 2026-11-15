@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils"
 import { useT } from "@/lib/i18n"
 import type { CalendarEvent, Column, Priority, Task } from "@/lib/tasks"
 import type { Store } from "@/lib/local-store"
+import { useCleanupRefresh } from "@/lib/use-cleanup-refresh"
 
 type BoardProps = {
   columnsHook: Store<Column>
@@ -24,6 +25,7 @@ type BoardProps = {
   /** Demo mode: data lives in this browser only, so file uploads are hidden. */
   demo?: boolean
   sync?: React.ReactNode
+  remindersReady?: boolean
 }
 
 const priorityStyle: Record<Priority, string> = {
@@ -42,11 +44,12 @@ function App() {
   const columnsHook = useCollection<Column>({ collection: "columns", api: "/api/columns" })
   const tasksHook = useCollection<Task>({ collection: "tasks", api: "/api/tasks" })
   const eventsHook = useCollection<CalendarEvent>({ collection: "events", api: "/api/events" })
+  useCleanupRefresh(tasksHook.refresh)
   const sync = <AccountSync loading={columnsHook.loading || tasksHook.loading || eventsHook.loading} error={columnsHook.error || tasksHook.error || eventsHook.error} refresh={async () => { await Promise.all([columnsHook.refresh(), tasksHook.refresh(), eventsHook.refresh()]) }} />
-  return <Board columnsHook={columnsHook} tasksHook={tasksHook} events={eventsHook.data as CalendarEvent[]} sync={sync} />
+  return <Board columnsHook={columnsHook} tasksHook={tasksHook} events={eventsHook.data as CalendarEvent[]} sync={sync} remindersReady={!columnsHook.loading && !columnsHook.error} />
 }
 
-export function Board({ columnsHook, tasksHook, events, demo = false, sync }: BoardProps) {
+export function Board({ columnsHook, tasksHook, events, demo = false, sync, remindersReady = true }: BoardProps) {
   const t = useT()
   const columns = useMemo(
     () => [...(columnsHook.data as Column[])].sort((a, b) => a.position - b.position),
@@ -123,7 +126,7 @@ export function Board({ columnsHook, tasksHook, events, demo = false, sync }: Bo
         notes: "",
         remind_days: -1,
         due_time: dueTime,
-        remind_before: remind,
+        remind_before: doneColumnIds.has(selectedColumn) ? -1 : remind,
       })
       setTitle("")
       setDue("")
@@ -183,7 +186,7 @@ export function Board({ columnsHook, tasksHook, events, demo = false, sync }: Bo
         </header>
 
         {sync}
-        <RemindersPanel tasks={tasks} events={events} doneColumnIds={doneColumnIds} showSettingsLink={!demo} />
+        <RemindersPanel tasks={remindersReady ? tasks : []} events={events} doneColumnIds={doneColumnIds} showSettingsLink={!demo} />
 
         {columns.length > 0 && (
           <form onSubmit={addTask} aria-label={t("Add a task")} className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-sm">
@@ -248,9 +251,9 @@ export function Board({ columnsHook, tasksHook, events, demo = false, sync }: Bo
                 )}
               </Field>
               <Field label={t("Remind me")} htmlFor="task-remind" className="col-span-2 sm:col-span-3 lg:col-span-1">
-                <ReminderPicker id="task-remind" value={remind} onChange={setRemind} />
+                {doneColumnIds.has(selectedColumn) ? <p className="text-sm text-muted-foreground">{t("Reminders are paused while a task is in a done column.")}</p> : <ReminderPicker id="task-remind" value={remind} onChange={setRemind} />}
               </Field>
-              {remind >= 0 && !due && (
+              {!doneColumnIds.has(selectedColumn) && remind >= 0 && !due && (
                 <p className="col-span-2 text-sm text-muted-foreground sm:col-span-3 lg:col-span-6">
                   {t("Pick a due date so the reminder knows when to go off.")}
                 </p>
@@ -534,7 +537,7 @@ function ColumnView({
                 </span>
                 {overdue && <span>· {t("Overdue")}</span>}
               </span>
-              {task.due && remindSeconds(task) != null && (
+              {!done && task.due && remindSeconds(task) != null && (
                 <span className="inline-flex items-center gap-1 text-muted-foreground">
                   <BellRing className="size-3.5" aria-hidden="true" />
                   {formatOffset(remindSeconds(task))}

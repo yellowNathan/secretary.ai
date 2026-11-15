@@ -93,6 +93,16 @@ export const preferencesSchema = z.object({
 })
 export type Preferences = z.infer<typeof preferencesSchema>
 
+export const task_cleanup_settingsSchema = z.object({
+  id: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  _owner: z.string(),
+  days: z.number(),
+  enabled_at: z.string(),
+})
+export type Task_cleanup_settings = z.infer<typeof task_cleanup_settingsSchema>
+
 export const secretary_settingsSchema = z.object({
   id: z.string(),
   created_at: z.string(),
@@ -174,6 +184,13 @@ export const preferencesCollection = vibesCollectionOptions({
   id: "preferences",
   schema: undefined,
   api: "/api/preferences",
+  ws: "ws://localhost:3000/ws",
+})
+
+export const task_cleanup_settingsCollection = vibesCollectionOptions({
+  id: "task_cleanup_settings",
+  schema: undefined,
+  api: "/api/task_cleanup_settings",
   ws: "ws://localhost:3000/ws",
 })
 
